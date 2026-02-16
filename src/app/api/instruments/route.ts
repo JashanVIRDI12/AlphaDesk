@@ -479,12 +479,7 @@ export async function GET(req: Request) {
     const apiKey = process.env.OPENROUTER_API_KEY;
     const primaryModel = process.env.OPENROUTER_MODEL;
 
-    if (!apiKey || !primaryModel) {
-        return NextResponse.json(
-            { error: "OpenRouter not configured." },
-            { status: 501 },
-        );
-    }
+    const aiConfigured = Boolean(apiKey && primaryModel);
 
     // Cache key: date + 1-hour block
     const now = new Date();
@@ -578,15 +573,25 @@ Respond with ONLY this JSON:
     // Try models in order
     let instruments: InstrumentAnalysis[] | null = null;
 
-    for (const fallbackModel of FALLBACK_MODELS) {
-        const modelToUse = fallbackModel ?? primaryModel;
-        console.log(`[instruments] Trying model: ${modelToUse}`);
-        instruments = await callAI(apiKey, modelToUse, systemPrompt, userPrompt, baseUrl);
-        if (instruments && instruments.length > 0) {
-            console.log(`[instruments] Success with model: ${modelToUse}`);
-            break;
+    if (aiConfigured) {
+        for (const fallbackModel of FALLBACK_MODELS) {
+            const modelToUse = fallbackModel ?? (primaryModel as string);
+            console.log(`[instruments] Trying model: ${modelToUse}`);
+            instruments = await callAI(
+                apiKey as string,
+                modelToUse,
+                systemPrompt,
+                userPrompt,
+                baseUrl,
+            );
+            if (instruments && instruments.length > 0) {
+                console.log(`[instruments] Success with model: ${modelToUse}`);
+                break;
+            }
+            console.log(`[instruments] ${modelToUse} failed, trying next...`);
         }
-        console.log(`[instruments] ${modelToUse} failed, trying next...`);
+    } else {
+        console.log("[instruments] OpenRouter not configured — using rule-based fallback");
     }
 
     // Fallback if all AI models fail

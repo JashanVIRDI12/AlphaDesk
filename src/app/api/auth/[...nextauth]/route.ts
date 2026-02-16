@@ -24,7 +24,7 @@ const handler = NextAuth({
         }
 
         // Try authenticating against stored users first
-        const user = authenticateUser(terminalId, accessCode);
+        const user = await authenticateUser(terminalId, accessCode);
         if (user) {
           return {
             id: user.terminalId,

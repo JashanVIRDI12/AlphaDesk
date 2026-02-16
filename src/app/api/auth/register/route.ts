@@ -30,7 +30,7 @@ export async function POST(request: Request) {
         // ── Create user ──
         let result;
         try {
-            result = createUser({
+            result = await createUser({
                 fullName: fullName.trim(),
                 email: email.trim(),
                 phone: phone?.trim() || "",
