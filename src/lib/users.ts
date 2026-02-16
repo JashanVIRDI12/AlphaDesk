@@ -16,21 +16,45 @@ export interface StoredUser {
 
 /* ──── file path ──── */
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const USERS_FILE = path.join(DATA_DIR, "users.json");
+function getDataDir(): string {
+    const configured = process.env.DATA_DIR;
+    if (configured && configured.trim()) {
+        return configured.trim();
+    }
+
+    // On many hosts (e.g. serverless), the project directory is read-only.
+    // /tmp is typically writable.
+    if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+        return path.join("/tmp", "alphadesk");
+    }
+
+    return path.join(process.cwd(), "data");
+}
+
+const USERS_FILE = path.join(getDataDir(), "users.json");
 
 /* ──── helpers ──── */
 
 function ensureDataDir(): void {
-    if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
+    const dataDir = path.dirname(USERS_FILE);
+    if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
     }
 }
 
 function readUsers(): StoredUser[] {
-    ensureDataDir();
+    try {
+        ensureDataDir();
+    } catch {
+        return [];
+    }
+
     if (!fs.existsSync(USERS_FILE)) {
-        fs.writeFileSync(USERS_FILE, "[]", "utf-8");
+        try {
+            fs.writeFileSync(USERS_FILE, "[]", "utf-8");
+        } catch {
+            return [];
+        }
         return [];
     }
     try {
