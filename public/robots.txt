@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /privacy
+Allow: /terms
+Allow: /disclaimer
+Disallow: /api/
+Disallow: /dashboard
+
+Sitemap: https://alphadesk.io/sitemap.xml

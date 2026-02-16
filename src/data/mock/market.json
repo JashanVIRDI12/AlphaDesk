@@ -1,0 +1,319 @@
+{
+  "greeting": {
+    "title": "Good Morning",
+    "subtitle": ""
+  },
+  "sessions": [
+    {
+      "name": "Asia",
+      "status": "Open",
+      "localTime": "09:18"
+    },
+    {
+      "name": "London",
+      "status": "Pre-market",
+      "localTime": "07:48"
+    },
+    {
+      "name": "New York",
+      "status": "Closed",
+      "localTime": "02:48"
+    }
+  ],
+  "instruments": [
+    {
+      "symbol": "XAUUSD",
+      "displayName": "Gold",
+      "price": 2037.4,
+      "changePct": 0.62,
+      "bias": "Bullish",
+      "confidence": 78,
+      "summary": "Real yields easing; flows supportive. Watch 2045/2052 resistance band.",
+      "series": [
+        {
+          "time": 1707696000,
+          "value": 2022.1
+        },
+        {
+          "time": 1707703200,
+          "value": 2024.6
+        },
+        {
+          "time": 1707710400,
+          "value": 2026.2
+        },
+        {
+          "time": 1707717600,
+          "value": 2029.9
+        },
+        {
+          "time": 1707724800,
+          "value": 2031.4
+        },
+        {
+          "time": 1707732000,
+          "value": 2033.7
+        },
+        {
+          "time": 1707739200,
+          "value": 2035.2
+        },
+        {
+          "time": 1707746400,
+          "value": 2037.4
+        }
+      ]
+    },
+    {
+      "symbol": "EURUSD",
+      "displayName": "Euro",
+      "price": 1.0842,
+      "changePct": -0.18,
+      "bias": "Bearish",
+      "confidence": 61,
+      "summary": "Dollar bid into US data. Rates spread widening; momentum still heavy.",
+      "series": [
+        {
+          "time": 1707696000,
+          "value": 1.0872
+        },
+        {
+          "time": 1707703200,
+          "value": 1.0863
+        },
+        {
+          "time": 1707710400,
+          "value": 1.0858
+        },
+        {
+          "time": 1707717600,
+          "value": 1.0854
+        },
+        {
+          "time": 1707724800,
+          "value": 1.085
+        },
+        {
+          "time": 1707732000,
+          "value": 1.0847
+        },
+        {
+          "time": 1707739200,
+          "value": 1.0844
+        },
+        {
+          "time": 1707746400,
+          "value": 1.0842
+        }
+      ]
+    },
+    {
+      "symbol": "GBPUSD",
+      "displayName": "Cable",
+      "price": 1.2649,
+      "changePct": 0.11,
+      "bias": "Bullish",
+      "confidence": 55,
+      "summary": "Carry improved; positioning cleaner. Still sensitive to UK wages & BoE rhetoric.",
+      "series": [
+        {
+          "time": 1707696000,
+          "value": 1.2622
+        },
+        {
+          "time": 1707703200,
+          "value": 1.2628
+        },
+        {
+          "time": 1707710400,
+          "value": 1.2631
+        },
+        {
+          "time": 1707717600,
+          "value": 1.2636
+        },
+        {
+          "time": 1707724800,
+          "value": 1.264
+        },
+        {
+          "time": 1707732000,
+          "value": 1.2643
+        },
+        {
+          "time": 1707739200,
+          "value": 1.2646
+        },
+        {
+          "time": 1707746400,
+          "value": 1.2649
+        }
+      ]
+    },
+    {
+      "symbol": "USDJPY",
+      "displayName": "Dollar/Yen",
+      "price": 147.28,
+      "changePct": -0.41,
+      "bias": "Bearish",
+      "confidence": 69,
+      "summary": "Volatility contained but intervention risk asymmetric. Watch 146.90 pivot.",
+      "series": [
+        {
+          "time": 1707696000,
+          "value": 148.02
+        },
+        {
+          "time": 1707703200,
+          "value": 147.9
+        },
+        {
+          "time": 1707710400,
+          "value": 147.76
+        },
+        {
+          "time": 1707717600,
+          "value": 147.64
+        },
+        {
+          "time": 1707724800,
+          "value": 147.56
+        },
+        {
+          "time": 1707732000,
+          "value": 147.44
+        },
+        {
+          "time": 1707739200,
+          "value": 147.36
+        },
+        {
+          "time": 1707746400,
+          "value": 147.28
+        }
+      ]
+    },
+    {
+      "symbol": "US100",
+      "displayName": "Nasdaq 100",
+      "price": 17942.3,
+      "changePct": 0.34,
+      "bias": "Bullish",
+      "confidence": 73,
+      "summary": "Quality growth bid persists. Breadth improving; key level 17,900 holds.",
+      "series": [
+        {
+          "time": 1707696000,
+          "value": 17810.0
+        },
+        {
+          "time": 1707703200,
+          "value": 17836.0
+        },
+        {
+          "time": 1707710400,
+          "value": 17860.5
+        },
+        {
+          "time": 1707717600,
+          "value": 17892.2
+        },
+        {
+          "time": 1707724800,
+          "value": 17910.1
+        },
+        {
+          "time": 1707732000,
+          "value": 17922.0
+        },
+        {
+          "time": 1707739200,
+          "value": 17934.4
+        },
+        {
+          "time": 1707746400,
+          "value": 17942.3
+        }
+      ]
+    },
+    {
+      "symbol": "BTC",
+      "displayName": "Bitcoin",
+      "price": 51780,
+      "changePct": 1.92,
+      "bias": "Bullish",
+      "confidence": 64,
+      "summary": "Spot demand steady; funding neutral. Breakout continuation depends on risk tone.",
+      "series": [
+        {
+          "time": 1707696000,
+          "value": 50320
+        },
+        {
+          "time": 1707703200,
+          "value": 50740
+        },
+        {
+          "time": 1707710400,
+          "value": 50910
+        },
+        {
+          "time": 1707717600,
+          "value": 51280
+        },
+        {
+          "time": 1707724800,
+          "value": 51340
+        },
+        {
+          "time": 1707732000,
+          "value": 51590
+        },
+        {
+          "time": 1707739200,
+          "value": 51640
+        },
+        {
+          "time": 1707746400,
+          "value": 51780
+        }
+      ]
+    }
+  ],
+  "macroDesk": {
+    "title": "AI Macro Desk",
+    "bias": "Risk-on (tactical)",
+    "bullets": [
+      "USD liquidity improving; vol suppressed across majors.",
+      "Rates: front-end sticky, long-end stable; gold supported.",
+      "Equities: momentum intact; watch CPI catalyst window."
+    ],
+    "notes": "Model output is mocked. Replace with live AI macro summary when available."
+  },
+  "fundamentals": {
+    "riskMode": "Risk-on",
+    "events": [
+      {
+        "time": "13:30",
+        "title": "US CPI (YoY)",
+        "impact": "High",
+        "consensus": "3.1%",
+        "previous": "3.4%"
+      },
+      {
+        "time": "15:00",
+        "title": "Fed Chair Remarks",
+        "impact": "High",
+        "consensus": "—",
+        "previous": "—"
+      },
+      {
+        "time": "19:30",
+        "title": "US Initial Jobless Claims",
+        "impact": "Medium",
+        "consensus": "214k",
+        "previous": "218k"
+      }
+    ]
+  }
+}
