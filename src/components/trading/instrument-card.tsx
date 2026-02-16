@@ -278,7 +278,7 @@ function InstrumentDetailModal({
         className="relative w-full max-w-lg animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-zinc-900/95 shadow-2xl shadow-black/50">
+        <div className="relative max-h-[calc(100vh-2rem)] overflow-hidden rounded-2xl border border-white/[0.08] bg-zinc-900/95 shadow-2xl shadow-black/50">
           {/* Top glow */}
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent" />
           <div
@@ -344,7 +344,7 @@ function InstrumentDetailModal({
           </div>
 
           {/* Content */}
-          <div className="space-y-4 px-5 py-5">
+          <div className="max-h-[calc(100vh-12rem)] overflow-y-auto overscroll-contain space-y-4 px-5 py-5">
             {/* Confidence row */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">

@@ -20,7 +20,7 @@ export default function Dashboard() {
             <AuthGate>
                 <DashboardHeader />
 
-                <main className="mx-auto w-full max-w-[1400px] px-4 py-6 md:px-6 md:py-8">
+                <main className="mx-auto w-full max-w-[1400px] px-4 py-5 sm:py-6 md:px-6 md:py-8">
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
                         <section className="space-y-7 lg:col-span-8">
                             <div className="space-y-4">
