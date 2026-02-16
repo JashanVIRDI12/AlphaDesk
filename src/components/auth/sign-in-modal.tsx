@@ -252,7 +252,7 @@ export function SignInModal({
                 <input
                   value={terminalId}
                   onChange={(e) => setTerminalId(e.target.value)}
-                  placeholder="HT-XXXXXXXX"
+                  placeholder="AD-XXXXXXXX"
                   className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 font-mono text-sm tracking-wider outline-none ring-offset-background placeholder:text-zinc-600 focus-visible:border-white/20 focus-visible:ring-1 focus-visible:ring-white/10 transition-all"
                   autoComplete="username"
                   autoFocus

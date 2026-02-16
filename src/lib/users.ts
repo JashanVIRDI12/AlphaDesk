@@ -74,7 +74,7 @@ function writeUsers(users: StoredUser[]): void {
 
 export function generateTerminalId(): string {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let id = "HT-";
+    let id = "AD-";
     for (let i = 0; i < 8; i++) {
         id += chars[Math.floor(Math.random() * chars.length)];
     }
