@@ -14,14 +14,18 @@ async function kvFetch<T>(command: string, args: string[]): Promise<T | null> {
   if (!baseUrl || !token) return null;
 
   const url = `${baseUrl}/${[command, ...args].map(encodeURIComponent).join("/")}`;
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  if (!res.ok) return null;
-  const json = (await res.json()) as { result?: unknown };
-  return (json.result as T) ?? null;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { result?: unknown };
+    return (json.result as T) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 async function rateLimit(req: NextRequest): Promise<{ ok: boolean; remaining?: number }>{
