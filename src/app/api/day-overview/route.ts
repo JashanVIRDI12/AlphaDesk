@@ -59,13 +59,14 @@ function isOverviewComplete(text: string) {
 
 export async function POST(req: Request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL;
+  const model = process.env.OPENROUTER_MODEL || "google/gemini-3-flash-preview";
+  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
-  if (!apiKey || !model) {
+  if (!apiKey) {
     return NextResponse.json(
       {
         error:
-          "OpenRouter not configured. Set OPENROUTER_API_KEY and OPENROUTER_MODEL in .env and restart.",
+          "OpenRouter not configured. Set OPENROUTER_API_KEY in .env and restart.",
       },
       { status: 501 },
     );
@@ -169,8 +170,8 @@ export async function POST(req: Request) {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:3000",
-        "X-Title": "AlphaDesk",
+        "HTTP-Referer": baseUrl,
+        "X-Title": "GetTradingBias",
       },
       body: JSON.stringify({
         model,

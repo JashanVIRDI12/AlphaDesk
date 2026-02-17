@@ -7,9 +7,9 @@ import { LandingFooter } from "@/components/landing/landing-footer";
 import { LandingNav } from "@/components/landing/landing-nav";
 
 export const metadata: Metadata = {
-    title: "AlphaDesk — AI-Powered Institutional Trading Terminal",
+    title: "GetTradingBias — AI-Powered Institutional Trading Terminal",
     description:
-        "AlphaDesk blends real-time news, technical analysis, and macro fundamentals into a single AI-powered dashboard for FX traders.",
+        "GetTradingBias blends real-time news, technical analysis, and macro fundamentals into a single AI-powered dashboard for FX traders.",
 };
 
 export default function HomePage() {

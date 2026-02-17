@@ -25,7 +25,7 @@ function getDataDir(): string {
     // On many hosts (e.g. serverless), the project directory is read-only.
     // /tmp is typically writable.
     if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-        return path.join("/tmp", "alphadesk");
+        return path.join("/tmp", "gettradingbias");
     }
 
     return path.join(process.cwd(), "data");

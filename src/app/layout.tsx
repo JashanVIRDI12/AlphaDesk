@@ -16,8 +16,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AlphaDesk",
-  description: "AlphaDesk — Institutional-grade AI trading terminal",
+  title: "GetTradingBias",
+  description: "GetTradingBias — AI-powered trading intelligence for FX traders",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

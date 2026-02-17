@@ -34,7 +34,7 @@ export function DashboardHeader() {
             <TrendingUp className="relative h-4 w-4 text-zinc-200" />
           </div>
           <div>
-            <div className="text-[13px] font-semibold tracking-tight">AlphaDesk</div>
+            <div className="text-[13px] font-semibold tracking-tight">GetTradingBias</div>
             <div className="hidden text-[10px] font-medium tracking-wide text-muted-foreground sm:block">
               INSTITUTIONAL TERMINAL
             </div>

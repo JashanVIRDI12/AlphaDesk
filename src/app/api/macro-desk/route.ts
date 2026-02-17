@@ -141,7 +141,7 @@ async function callAI(
                 Authorization: `Bearer ${apiKey}`,
                 "Content-Type": "application/json",
                 "HTTP-Referer": baseUrl,
-                "X-Title": "AlphaDesk",
+                "X-Title": "GetTradingBias",
             },
             body: JSON.stringify({
                 model,
@@ -257,6 +257,7 @@ function buildLocalFallback(
 /* ── Models to try (in order) ── */
 const FALLBACK_MODELS = [
     null, // uses env OPENROUTER_MODEL
+    "google/gemini-3-flash-preview",
     "google/gemini-2.0-flash-001",
     "meta-llama/llama-3.3-70b-instruct",
 ];
@@ -264,13 +265,14 @@ const FALLBACK_MODELS = [
 /* ── GET handler ── */
 export async function GET(req: Request) {
     const apiKey = process.env.OPENROUTER_API_KEY;
-    const primaryModel = process.env.OPENROUTER_MODEL;
+    const primaryModel =
+        process.env.OPENROUTER_MODEL || "google/gemini-3-flash-preview";
 
-    if (!apiKey || !primaryModel) {
+    if (!apiKey) {
         return NextResponse.json(
             {
                 error:
-                    "OpenRouter not configured. Set OPENROUTER_API_KEY and OPENROUTER_MODEL in .env.",
+                    "OpenRouter not configured. Set OPENROUTER_API_KEY in .env.",
             },
             { status: 501 },
         );

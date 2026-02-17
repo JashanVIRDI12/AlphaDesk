@@ -37,7 +37,7 @@ function buildCredentialEmail(params: CredentialEmailParams): {
   html: string;
   text: string;
 } {
-  const subject = `Your AlphaDesk Terminal Credentials`;
+  const subject = `Your GetTradingBias Terminal Credentials`;
 
   const html = `
 <!DOCTYPE html>
@@ -52,7 +52,7 @@ function buildCredentialEmail(params: CredentialEmailParams): {
     <!-- Header -->
     <div style="text-align:center; margin-bottom:32px;">
       <div style="display:inline-block; padding:8px 16px; border:1px solid rgba(255,255,255,0.1); border-radius:12px; background:rgba(255,255,255,0.03);">
-        <span style="color:#a1a1aa; font-size:11px; letter-spacing:2px; text-transform:uppercase;">AlphaDesk</span>
+        <span style="color:#a1a1aa; font-size:11px; letter-spacing:2px; text-transform:uppercase;">GetTradingBias</span>
       </div>
     </div>
 
@@ -94,7 +94,7 @@ function buildCredentialEmail(params: CredentialEmailParams): {
       <p style="color:rgba(234,179,8,0.7); font-size:12px; line-height:1.5; margin:0;">
         <strong style="color:rgba(234,179,8,0.9);">Security Notice:</strong> 
         Keep your credentials secure. Do not share your access code with anyone. 
-        AlphaDesk will never ask for your access code via email or phone.
+        GetTradingBias will never ask for your access code via email or phone.
       </p>
     </div>
 
@@ -104,7 +104,7 @@ function buildCredentialEmail(params: CredentialEmailParams): {
         256-bit TLS encrypted · Institutional grade security
       </p>
       <p style="color:#27272a; font-size:10px; margin:8px 0 0;">
-        © ${new Date().getFullYear()} AlphaDesk. All rights reserved.
+        © ${new Date().getFullYear()} GetTradingBias. All rights reserved.
       </p>
     </div>
 
@@ -113,7 +113,7 @@ function buildCredentialEmail(params: CredentialEmailParams): {
 </html>`;
 
   const text = `
-AlphaDesk — Terminal Credentials
+GetTradingBias — Terminal Credentials
 
 Welcome, ${params.fullName}
 
@@ -126,7 +126,7 @@ Sign in at: ${process.env.NEXTAUTH_URL || "http://localhost:3000"}
 
 Security Notice: Keep your credentials secure. Do not share your access code with anyone.
 
-© ${new Date().getFullYear()} AlphaDesk
+© ${new Date().getFullYear()} GetTradingBias
 `;
 
   return { subject, html, text };
@@ -152,7 +152,7 @@ export async function sendCredentialEmail(
     console.log("   SMTP_PORT=587");
     console.log("   SMTP_USER=your-email@gmail.com");
     console.log("   SMTP_PASS=your-app-password");
-    console.log("   SMTP_FROM=AlphaDesk <your-email@gmail.com>");
+    console.log("   SMTP_FROM=GetTradingBias <your-email@gmail.com>");
     console.log("──────────────────────────────────────────");
     return { sent: false, error: "SMTP not configured" };
   }

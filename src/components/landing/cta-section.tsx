@@ -79,7 +79,7 @@ export function CtaSection() {
                         animate={isInView ? { opacity: 1, y: 0 } : {}}
                         transition={{ duration: 0.6, delay: 0.3, ease: [0.23, 1, 0.32, 1] }}
                     >
-                        Access the AlphaDesk terminal and get AI-powered analysis
+                        Access the GetTradingBias terminal and get AI-powered analysis
                         for every trade decision.
                     </motion.p>
 

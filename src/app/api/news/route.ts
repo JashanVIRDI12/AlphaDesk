@@ -98,7 +98,7 @@ async function fetchFeed(feedUrl: string, feedSource: string): Promise<Headline[
     try {
         const res = await fetch(feedUrl, {
             headers: {
-                "User-Agent": "Mozilla/5.0 (compatible; AlphaDesk/1.0)",
+                "User-Agent": "Mozilla/5.0 (compatible; GetTradingBias/1.0)",
             },
             signal: AbortSignal.timeout(8000),
         });

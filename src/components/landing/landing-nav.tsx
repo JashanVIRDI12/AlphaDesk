@@ -22,7 +22,7 @@ export function LandingNav() {
                         <TrendingUp className="h-4 w-4 text-zinc-400 transition-colors duration-300 group-hover:text-emerald-400" />
                     </div>
                     <span className="text-[15px] font-bold tracking-tight">
-                        Alpha<span className="text-zinc-500 transition-colors duration-300 group-hover:text-zinc-400">Desk</span>
+                        Get<span className="text-zinc-500 transition-colors duration-300 group-hover:text-zinc-400">TradingBias</span>
                     </span>
                 </Link>
 

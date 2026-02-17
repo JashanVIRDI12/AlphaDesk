@@ -3,8 +3,8 @@ import Link from "next/link";
 import { TrendingUp, ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
-    title: "Privacy Policy — AlphaDesk",
-    description: "Privacy Policy for AlphaDesk AI trading terminal.",
+    title: "Privacy Policy — GetTradingBias",
+    description: "Privacy Policy for GetTradingBias AI trading terminal.",
 };
 
 function LegalNav() {
@@ -16,7 +16,7 @@ function LegalNav() {
                         <TrendingUp className="h-4 w-4 text-emerald-400" />
                     </div>
                     <span className="text-[15px] font-bold tracking-tight text-zinc-100">
-                        AlphaDesk
+                        GetTradingBias
                     </span>
                 </Link>
                 <Link
@@ -51,7 +51,7 @@ export default function PrivacyPage() {
                             1. Introduction
                         </h2>
                         <p>
-                            AlphaDesk (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) is committed to protecting
+                            GetTradingBias (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) is committed to protecting
                             your privacy. This Privacy Policy describes how we collect, use,
                             and share information when you use our AI-powered trading terminal
                             and related services (collectively, the &quot;Service&quot;).
@@ -219,7 +219,7 @@ export default function PrivacyPage() {
                         <p>
                             If you have questions about this Privacy Policy, please reach out
                             to us at{" "}
-                            <span className="text-zinc-300 font-medium">support@alphadesk.io</span>.
+                            <span className="text-zinc-300 font-medium">support@gettradingbias.com</span>.
                         </p>
                     </section>
                 </div>
@@ -229,7 +229,7 @@ export default function PrivacyPage() {
             <footer className="border-t border-white/[0.04] bg-[#050508]">
                 <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-6">
                     <p className="text-[11px] text-zinc-700">
-                        © {new Date().getFullYear()} AlphaDesk. All rights reserved.
+                        © GetTradingBias. All rights reserved.
                     </p>
                     <div className="flex gap-6">
                         <Link href="/privacy" className="text-[11px] text-zinc-600 hover:text-zinc-400">Privacy</Link>

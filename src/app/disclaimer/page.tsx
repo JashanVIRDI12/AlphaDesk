@@ -3,9 +3,9 @@ import Link from "next/link";
 import { TrendingUp, ArrowLeft, AlertTriangle } from "lucide-react";
 
 export const metadata: Metadata = {
-    title: "Risk Disclaimer — AlphaDesk",
+    title: "Risk Disclaimer — GetTradingBias",
     description:
-        "Risk disclaimer and financial disclosure for AlphaDesk AI trading terminal.",
+        "Risk disclaimer and financial disclosure for GetTradingBias AI trading terminal.",
 };
 
 function LegalNav() {
@@ -17,7 +17,7 @@ function LegalNav() {
                         <TrendingUp className="h-4 w-4 text-emerald-400" />
                     </div>
                     <span className="text-[15px] font-bold tracking-tight text-zinc-100">
-                        AlphaDesk
+                        GetTradingBias
                     </span>
                 </Link>
                 <Link
@@ -70,7 +70,7 @@ export default function DisclaimerPage() {
                             1. Not Financial Advice
                         </h2>
                         <p>
-                            AlphaDesk is an informational and analytical tool. The content
+                            GetTradingBias is an informational and analytical tool. The content
                             provided on this platform — including AI-generated analysis, bias
                             assessments, confidence scores, news summaries, technical levels,
                             and macro commentary — is for <strong className="text-zinc-300">
@@ -114,7 +114,7 @@ export default function DisclaimerPage() {
                             4. AI Limitations
                         </h2>
                         <p className="mb-3">
-                            The AI-powered analysis provided by AlphaDesk has inherent
+                            The AI-powered analysis provided by GetTradingBias has inherent
                             limitations:
                         </p>
                         <ul className="ml-4 list-disc space-y-2">
@@ -163,7 +163,7 @@ export default function DisclaimerPage() {
                             6. Third-Party Data
                         </h2>
                         <p>
-                            AlphaDesk aggregates data from third-party sources including news
+                            GetTradingBias aggregates data from third-party sources including news
                             providers, market data feeds, and economic calendars. We do not
                             guarantee the accuracy, completeness, or timeliness of third-party
                             data. Trading decisions based on potentially inaccurate data are
@@ -191,7 +191,7 @@ export default function DisclaimerPage() {
                             8. Regulatory Compliance
                         </h2>
                         <p>
-                            AlphaDesk is not a regulated financial institution, broker, or
+                            GetTradingBias is not a regulated financial institution, broker, or
                             investment advisor. We do not hold, manage, or have access to
                             client funds. Users are responsible for ensuring that their own
                             trading activities comply with the laws and regulations of their
@@ -229,7 +229,7 @@ export default function DisclaimerPage() {
                             10. Limitation of Liability
                         </h2>
                         <p>
-                            AlphaDesk, its creators, employees, and affiliates shall not be
+                            GetTradingBias, its creators, employees, and affiliates shall not be
                             held liable for any financial losses, damages, or costs incurred
                             as a result of using the platform or relying on the analysis and
                             information provided. Use the Service at your own risk.
@@ -242,10 +242,10 @@ export default function DisclaimerPage() {
                             Acknowledgement
                         </h2>
                         <p>
-                            By using AlphaDesk, you acknowledge that you have read,
+                            By using GetTradingBias, you acknowledge that you have read,
                             understood, and agree to this Risk Disclaimer. You accept full
                             responsibility for your trading decisions and understand that
-                            AlphaDesk provides informational tools, not financial advice.
+                            GetTradingBias provides informational tools, not financial advice.
                         </p>
                     </section>
 
@@ -257,7 +257,7 @@ export default function DisclaimerPage() {
                         <p>
                             If you have questions about this disclaimer, please reach out
                             to us at{" "}
-                            <span className="text-zinc-300 font-medium">support@alphadesk.io</span>.
+                            <span className="text-zinc-300 font-medium">support@gettradingbias.com</span>.
                         </p>
                     </section>
                 </div>
@@ -267,7 +267,7 @@ export default function DisclaimerPage() {
             <footer className="border-t border-white/[0.04] bg-[#050508]">
                 <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-6">
                     <p className="text-[11px] text-zinc-700">
-                        © {new Date().getFullYear()} AlphaDesk. All rights reserved.
+                        © GetTradingBias. All rights reserved.
                     </p>
                     <div className="flex gap-6">
                         <Link href="/privacy" className="text-[11px] text-zinc-600 hover:text-zinc-400">Privacy</Link>

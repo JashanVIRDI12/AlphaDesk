@@ -106,7 +106,7 @@ async function fetchTechnicalData(
         const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1h&range=5d`;
         const res = await fetch(url, {
             headers: {
-                "User-Agent": "Mozilla/5.0 (compatible; AlphaDesk/1.0)",
+                "User-Agent": "Mozilla/5.0 (compatible; GetTradingBias/1.0)",
             },
             signal: AbortSignal.timeout(8000),
         });
@@ -321,7 +321,7 @@ async function callAI(
                 Authorization: `Bearer ${apiKey}`,
                 "Content-Type": "application/json",
                 "HTTP-Referer": baseUrl,
-                "X-Title": "AlphaDesk",
+                "X-Title": "GetTradingBias",
             },
             body: JSON.stringify({
                 model,
@@ -384,24 +384,33 @@ async function callAI(
                     if (Array.isArray(parsed) && parsed.length > 0) {
                         return parsed.map((item: Record<string, unknown>) => ({
                             symbol: String(item.symbol),
-                            displayName: String(item.displayName ?? item.display_name ?? item.symbol),
+                            displayName: String(
+                                item.displayName ?? item.display_name ?? item.symbol,
+                            ),
                             bias: String(item.bias) === "Bearish" ? "Bearish" : "Bullish",
-                            confidence: Math.min(95, Math.max(30, Number(item.confidence) || 50)),
+                            confidence: Math.min(
+                                95,
+                                Math.max(30, Number(item.confidence) || 50),
+                            ),
                             summary: String(item.summary ?? ""),
                             newsDriver: String(item.newsDriver ?? item.news_driver ?? ""),
-                            technicalLevels: String(item.technicalLevels ?? item.technical_levels ?? ""),
-                            macroBackdrop: String(item.macroBackdrop ?? item.macro_backdrop ?? ""),
+                            technicalLevels: String(
+                                item.technicalLevels ?? item.technical_levels ?? "",
+                            ),
+                            macroBackdrop: String(
+                                item.macroBackdrop ?? item.macro_backdrop ?? "",
+                            ),
                         })) as InstrumentAnalysis[];
                     }
                 } catch {
-                    console.error(`[instruments] ${model} JSON parse failed`);
+                    // ignore
                 }
             }
         }
 
         return null;
     } catch (err) {
-        console.error(`[instruments] ${model} call failed:`, err);
+        console.error(`[instruments] Failed to parse AI response (${model}):`, err);
         return null;
     }
 }
@@ -470,6 +479,7 @@ function buildFallback(
 /* ── Models to try ── */
 const FALLBACK_MODELS = [
     null, // uses env OPENROUTER_MODEL
+    "google/gemini-3-flash-preview",
     "google/gemini-2.0-flash-001",
     "meta-llama/llama-3.3-70b-instruct",
 ];
@@ -477,9 +487,10 @@ const FALLBACK_MODELS = [
 /* ── GET handler ── */
 export async function GET(req: Request) {
     const apiKey = process.env.OPENROUTER_API_KEY;
-    const primaryModel = process.env.OPENROUTER_MODEL;
+    const primaryModel =
+        process.env.OPENROUTER_MODEL || "google/gemini-3-flash-preview";
 
-    const aiConfigured = Boolean(apiKey && primaryModel);
+    const aiConfigured = Boolean(apiKey);
 
     // Cache key: date + 1-hour block
     const now = new Date();

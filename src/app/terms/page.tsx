@@ -3,8 +3,8 @@ import Link from "next/link";
 import { TrendingUp, ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
-    title: "Terms of Service — AlphaDesk",
-    description: "Terms of Service for AlphaDesk AI trading terminal.",
+    title: "Terms of Service — GetTradingBias",
+    description: "Terms of Service for GetTradingBias AI trading terminal.",
 };
 
 function LegalNav() {
@@ -16,7 +16,7 @@ function LegalNav() {
                         <TrendingUp className="h-4 w-4 text-emerald-400" />
                     </div>
                     <span className="text-[15px] font-bold tracking-tight text-zinc-100">
-                        AlphaDesk
+                        GetTradingBias
                     </span>
                 </Link>
                 <Link
@@ -51,7 +51,7 @@ export default function TermsPage() {
                             1. Acceptance of Terms
                         </h2>
                         <p>
-                            By accessing or using AlphaDesk (&quot;the Service&quot;), you agree to be
+                            By accessing or using GetTradingBias (&quot;the Service&quot;), you agree to be
                             bound by these Terms of Service (&quot;Terms&quot;). If you do not agree
                             to these Terms, you may not access or use the Service. We reserve
                             the right to modify these Terms at any time, and your continued
@@ -65,7 +65,7 @@ export default function TermsPage() {
                             2. Description of Service
                         </h2>
                         <p>
-                            AlphaDesk is an AI-powered trading analysis platform that provides
+                            GetTradingBias is an AI-powered trading analysis platform that provides
                             real-time news aggregation, technical analysis, macro fundamental
                             data, and AI-generated market commentary for informational
                             purposes. The Service does not execute trades, manage funds, or
@@ -142,7 +142,7 @@ export default function TermsPage() {
                         <p>
                             All content, features, and functionality of the Service — including
                             but not limited to text, graphics, logos, AI-generated analysis,
-                            software, and design — are owned by AlphaDesk and protected by
+                            software, and design — are owned by GetTradingBias and protected by
                             intellectual property laws. You may not copy, modify, distribute,
                             sell, or lease any part of the Service without express written
                             permission.
@@ -190,7 +190,7 @@ export default function TermsPage() {
                             8. Limitation of Liability
                         </h2>
                         <p>
-                            TO THE MAXIMUM EXTENT PERMITTED BY LAW, ALPHADESK SHALL NOT BE
+                            TO THE MAXIMUM EXTENT PERMITTED BY LAW, GETTRADINGBIAS SHALL NOT BE
                             LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR
                             PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS,
                             DATA, OR GOODWILL, ARISING FROM YOUR USE OF OR INABILITY TO USE
@@ -220,7 +220,7 @@ export default function TermsPage() {
                             10. Indemnification
                         </h2>
                         <p>
-                            You agree to indemnify and hold harmless AlphaDesk, its officers,
+                            You agree to indemnify and hold harmless GetTradingBias, its officers,
                             directors, employees, and agents from any claims, damages, losses,
                             or expenses (including legal fees) arising out of your use of the
                             Service, your violation of these Terms, or your violation of any
@@ -262,7 +262,7 @@ export default function TermsPage() {
                         <p>
                             If you have questions about these Terms, please reach out
                             to us at{" "}
-                            <span className="text-zinc-300 font-medium">support@alphadesk.io</span>.
+                            <span className="text-zinc-300 font-medium">support@gettradingbias.com</span>.
                         </p>
                     </section>
                 </div>
@@ -272,7 +272,7 @@ export default function TermsPage() {
             <footer className="border-t border-white/[0.04] bg-[#050508]">
                 <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-6">
                     <p className="text-[11px] text-zinc-700">
-                        © {new Date().getFullYear()} AlphaDesk. All rights reserved.
+                        © GetTradingBias. All rights reserved.
                     </p>
                     <div className="flex gap-6">
                         <Link href="/privacy" className="text-[11px] text-zinc-600 hover:text-zinc-400">Privacy</Link>

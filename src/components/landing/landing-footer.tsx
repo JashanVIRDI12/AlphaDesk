@@ -11,7 +11,7 @@ export function LandingFooter() {
                         <div className="flex items-center gap-2">
                             <TrendingUp className="h-4 w-4 text-zinc-500" />
                             <span className="text-[14px] font-bold tracking-tight">
-                                Alpha<span className="text-zinc-600">Desk</span>
+                                Get<span className="text-zinc-600">TradingBias</span>
                             </span>
                         </div>
                         <p className="mt-2.5 max-w-[260px] text-[11.5px] leading-[1.6] text-zinc-700">
@@ -79,7 +79,7 @@ export function LandingFooter() {
                 {/* Bottom bar */}
                 <div className="mt-10 flex flex-col items-center gap-2.5 border-t border-white/[0.03] pt-6 md:flex-row md:justify-between">
                     <p className="text-[10.5px] text-zinc-700">
-                        © {new Date().getFullYear()} AlphaDesk. All rights reserved.
+                        © GetTradingBias. All rights reserved.
                     </p>
                     <p className="text-[10px] text-zinc-800">
                         Trading involves risk. Past performance does not guarantee future
