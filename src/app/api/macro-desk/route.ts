@@ -24,7 +24,13 @@ let cache:
     }
     | undefined;
 
+let inflight: Promise<MacroDeskResponse> | undefined;
+
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+const CACHE_HEADERS = {
+    "Cache-Control": "private, max-age=0, s-maxage=300, stale-while-revalidate=1800",
+};
 
 /* ── Gather live context from internal APIs ── */
 
@@ -284,7 +290,12 @@ export async function GET(req: Request) {
     const cacheKey = `${today}-${hour}`;
 
     if (cache && cache.key === cacheKey && Date.now() - cache.fetchedAt < CACHE_TTL) {
-        return NextResponse.json(cache.data);
+        return NextResponse.json(cache.data, { headers: CACHE_HEADERS });
+    }
+
+    if (inflight) {
+        const data = await inflight;
+        return NextResponse.json({ ...data, cached: true }, { headers: CACHE_HEADERS });
     }
 
     // Determine base URL
@@ -292,12 +303,13 @@ export async function GET(req: Request) {
     const protocol = host.startsWith("localhost") ? "http" : "https";
     const baseUrl = `${protocol}://${host}`;
 
-    // Gather live context in parallel (news + calendar + macro indicators)
-    const [newsContext, calendarContext, macroContext] = await Promise.all([
-        fetchNewsHeadlines(baseUrl),
-        fetchCalendarEvents(baseUrl),
-        fetchMacroIndicators(baseUrl),
-    ]);
+    inflight = (async () => {
+        // Gather live context in parallel (news + calendar + macro indicators)
+        const [newsContext, calendarContext, macroContext] = await Promise.all([
+            fetchNewsHeadlines(baseUrl),
+            fetchCalendarEvents(baseUrl),
+            fetchMacroIndicators(baseUrl),
+        ]);
 
     const now = new Date();
     const timeStr = now.toLocaleTimeString("en-US", {
@@ -352,34 +364,34 @@ Respond with ONLY this JSON (no markdown, no code fences, no explanation):
 
 {"bias":"<Risk-on | Risk-off | Neutral | Risk-on (tactical) | Risk-off (tactical)>","bullets":["<USD/rates/Fed — reference actual rate, CPI trend>","<EUR macro — reference ECB rate, eurozone inflation/growth>","<GBP macro — reference BoE rate, UK inflation/growth>","<JPY/BoJ — reference BoJ rate, carry trade dynamics>","<Key risk event + liquidity/positioning — 1 sentence>"],"notes":"<1-2 sentence tactical takeaway referencing rate differentials or macro divergences>"}`;
 
-    // Try models in order until one works
-    let parsed: { bias: string; bullets: string[]; notes: string } | null = null;
+        // Try models in order until one works
+        let parsed: { bias: string; bullets: string[]; notes: string } | null = null;
 
-    for (const fallbackModel of FALLBACK_MODELS) {
-        const modelToUse = fallbackModel ?? primaryModel;
-        console.log(`[macro-desk] Trying model: ${modelToUse}`);
-        parsed = await callAI(apiKey, modelToUse, systemPrompt, userPrompt, baseUrl);
-        if (parsed) {
-            console.log(`[macro-desk] Success with model: ${modelToUse}`);
-            break;
+        for (const fallbackModel of FALLBACK_MODELS) {
+            const modelToUse = fallbackModel ?? primaryModel;
+            console.log(`[macro-desk] Trying model: ${modelToUse}`);
+            parsed = await callAI(apiKey, modelToUse, systemPrompt, userPrompt, baseUrl);
+            if (parsed) {
+                console.log(`[macro-desk] Success with model: ${modelToUse}`);
+                break;
+            }
+            console.log(`[macro-desk] ${modelToUse} failed, trying next...`);
         }
-        console.log(`[macro-desk] ${modelToUse} failed, trying next...`);
-    }
 
-    // If all AI models failed, use local fallback
-    if (!parsed) {
-        console.log("[macro-desk] All AI models failed, using local fallback");
-        const fallback = buildLocalFallback(newsContext, calendarContext, macroContext, sessionNote);
+        // If all AI models failed, use local fallback
+        if (!parsed) {
+            console.log("[macro-desk] All AI models failed, using local fallback");
+            const fallback = buildLocalFallback(newsContext, calendarContext, macroContext, sessionNote);
 
-        // Cache for 10 min only (so it retries sooner)
-        cache = {
-            key: cacheKey,
-            fetchedAt: Date.now() - CACHE_TTL + 10 * 60 * 1000,
-            data: { ...fallback, cached: true },
-        };
+            // Cache for 10 min only (so it retries sooner)
+            cache = {
+                key: cacheKey,
+                fetchedAt: Date.now() - CACHE_TTL + 10 * 60 * 1000,
+                data: { ...fallback, cached: true },
+            };
 
-        return NextResponse.json(fallback);
-    }
+            return fallback;
+        }
 
     const responseData: MacroDeskResponse = {
         title: "AI Macro Desk",
@@ -390,12 +402,20 @@ Respond with ONLY this JSON (no markdown, no code fences, no explanation):
         generatedAt: now.toISOString(),
     };
 
-    // Store in cache
-    cache = {
-        key: cacheKey,
-        fetchedAt: Date.now(),
-        data: { ...responseData, cached: true },
-    };
+        // Store in cache
+        cache = {
+            key: cacheKey,
+            fetchedAt: Date.now(),
+            data: { ...responseData, cached: true },
+        };
 
-    return NextResponse.json(responseData);
+        return responseData;
+    })();
+
+    try {
+        const data = await inflight;
+        return NextResponse.json(data, { headers: CACHE_HEADERS });
+    } finally {
+        inflight = undefined;
+    }
 }

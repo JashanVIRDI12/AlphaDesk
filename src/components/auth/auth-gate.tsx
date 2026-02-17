@@ -96,7 +96,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           <SignInModal
             open={signInOpen}
             onOpenChange={setSignInOpen}
-            title="Sign in to GetTradingBias"
+            title="Sign in to GetTradingBias (BETA)"
             initialMode={mode}
           />
         </div>

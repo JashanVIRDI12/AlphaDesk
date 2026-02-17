@@ -48,7 +48,12 @@ const FEEDS = [
 
 /* ── Cache ── */
 let cache: { fetchedAt: number; headlines: Headline[] } | undefined;
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+let inflight: Promise<Headline[]> | undefined;
+const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+
+const CACHE_HEADERS = {
+    "Cache-Control": "private, max-age=0, s-maxage=120, stale-while-revalidate=600",
+};
 
 /* ── Helpers ── */
 function timeAgo(dateStr: string): string {
@@ -144,22 +149,38 @@ async function fetchFeed(feedUrl: string, feedSource: string): Promise<Headline[
 export async function GET() {
     // Return cache if fresh
     if (cache && Date.now() - cache.fetchedAt < CACHE_TTL) {
-        return NextResponse.json({
+        return NextResponse.json(
+            {
             headlines: cache.headlines,
             cached: true,
             count: cache.headlines.length,
-        });
+            },
+            { headers: CACHE_HEADERS },
+        );
+    }
+
+    if (inflight) {
+        const headlines = await inflight;
+        return NextResponse.json(
+            {
+                headlines,
+                cached: true,
+                count: headlines.length,
+            },
+            { headers: CACHE_HEADERS },
+        );
     }
 
     // Fetch all feeds in parallel
-    const results = await Promise.all(
-        FEEDS.map((f) => fetchFeed(f.url, f.source)),
-    );
+    inflight = (async () => {
+        const results = await Promise.all(
+            FEEDS.map((f) => fetchFeed(f.url, f.source)),
+        );
 
-    // Merge, deduplicate by title similarity, sort by date
-    const allHeadlines = results.flat();
-    const seen = new Set<string>();
-    const unique: Headline[] = [];
+        // Merge, deduplicate by title similarity, sort by date
+        const allHeadlines = results.flat();
+        const seen = new Set<string>();
+        const unique: Headline[] = [];
 
     for (const h of allHeadlines) {
         // Simple dedup: first 40 chars lowercase
@@ -175,19 +196,30 @@ export async function GET() {
             new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
     );
 
-    // Keep top 8
-    const headlines = unique.slice(0, 12);
+        // Keep top 8
+        const headlines = unique.slice(0, 12);
 
     // Refresh ago values
     for (const h of headlines) {
         h.ago = timeAgo(h.publishedAt);
     }
 
-    cache = { fetchedAt: Date.now(), headlines };
+        cache = { fetchedAt: Date.now(), headlines };
+        return headlines;
+    })();
 
-    return NextResponse.json({
-        headlines,
-        cached: false,
-        count: headlines.length,
-    });
+    try {
+        const headlines = await inflight;
+
+        return NextResponse.json(
+            {
+                headlines,
+                cached: false,
+                count: headlines.length,
+            },
+            { headers: CACHE_HEADERS },
+        );
+    } finally {
+        inflight = undefined;
+    }
 }

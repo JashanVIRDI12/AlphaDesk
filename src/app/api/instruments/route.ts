@@ -34,6 +34,10 @@ let cache:
 
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
+const CACHE_HEADERS = {
+    "Cache-Control": "private, max-age=0, s-maxage=300, stale-while-revalidate=1800",
+};
+
 /* ── Instruments to analyse ── */
 const INSTRUMENTS = [
     { symbol: "EURUSD", displayName: "Euro / Dollar", yahoo: "EURUSD=X" },
@@ -497,7 +501,7 @@ export async function GET(req: Request) {
     const cacheKey = `${now.toISOString().slice(0, 10)}-h${now.getHours()}`;
 
     if (cache && cache.key === cacheKey && Date.now() - cache.fetchedAt < CACHE_TTL) {
-        return NextResponse.json(cache.data);
+        return NextResponse.json(cache.data, { headers: CACHE_HEADERS });
     }
 
     // Determine base URL
@@ -628,5 +632,5 @@ Respond with ONLY this JSON:
         data: { ...responseData, cached: true },
     };
 
-    return NextResponse.json(responseData);
+    return NextResponse.json(responseData, { headers: CACHE_HEADERS });
 }

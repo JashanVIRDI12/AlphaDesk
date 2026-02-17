@@ -49,6 +49,10 @@ type CacheEntry = {
 const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<FeedResult>>();
 
+const CACHE_HEADERS = {
+  "Cache-Control": "private, max-age=0, s-maxage=300, stale-while-revalidate=1800",
+};
+
 // Longer cache TTL when the feed returned zero events for today
 const EMPTY_RESULT_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 const NORMAL_TTL_MS = 30 * 60 * 1000;            // 30 minutes
@@ -329,21 +333,23 @@ export async function GET(req: Request) {
   const tz = tzParam && isValidTimeZone(tzParam) ? tzParam : DEFAULT_CALENDAR_TIME_ZONE;
 
   const now = Date.now();
-  const istToday = getTodayKey(LOCAL_DISPLAY_TIME_ZONE);
-  const today = istToday;
+  const today = getTodayKey(tz);
   const key = `${tz}::${today}`;
 
   const cached = cache.get(key);
   if (cached?.cooldownUntil && now < cached.cooldownUntil) {
-    return NextResponse.json({
-      source: "ff",
-      tz,
-      today: cached.today,
-      events: cached.data,
-      holidays: cached.holidays,
-      stale: true,
-      error: "calendar_rate_limited",
-    });
+    return NextResponse.json(
+      {
+        source: "ff",
+        tz,
+        today: cached.today,
+        events: cached.data,
+        holidays: cached.holidays,
+        stale: true,
+        error: "calendar_rate_limited",
+      },
+      { headers: CACHE_HEADERS },
+    );
   }
 
   // Use longer TTL when the cached result was empty (no news day / weekend)
@@ -351,16 +357,21 @@ export async function GET(req: Request) {
 
   if (cached && now - cached.fetchedAt < effectiveTtl) {
     const noNews = cached.data.length === 0;
-    return NextResponse.json({
-      source: "ff",
-      tz,
-      today: cached.today,
-      events: cached.data,
-      holidays: cached.holidays,
-      cached: true,
-      noNews,
-      ...(noNews ? { message: "No high-impact news today — market will show less momentum." } : {}),
-    });
+    return NextResponse.json(
+      {
+        source: "ff",
+        tz,
+        today: cached.today,
+        events: cached.data,
+        holidays: cached.holidays,
+        cached: true,
+        noNews,
+        ...(noNews
+          ? { message: "No high-impact news today — market will show less momentum." }
+          : {}),
+      },
+      { headers: CACHE_HEADERS },
+    );
   }
 
   const existing = inflight.get(key);
@@ -368,19 +379,32 @@ export async function GET(req: Request) {
     try {
       const result = await existing;
       cache.set(key, { fetchedAt: now, today, data: result.events, holidays: result.holidays });
-      return NextResponse.json({ source: "ff", tz, today, events: result.events, holidays: result.holidays, cached: true });
+      return NextResponse.json(
+        {
+          source: "ff",
+          tz,
+          today,
+          events: result.events,
+          holidays: result.holidays,
+          cached: true,
+        },
+        { headers: CACHE_HEADERS },
+      );
     } catch (e) {
       const entry = cache.get(key);
       if (entry?.data?.length) {
-        return NextResponse.json({
-          source: "ff",
-          tz,
-          today: entry.today,
-          events: entry.data,
-          holidays: entry.holidays,
-          stale: true,
-          error: "calendar_fetch_failed",
-        });
+        return NextResponse.json(
+          {
+            source: "ff",
+            tz,
+            today: entry.today,
+            events: entry.data,
+            holidays: entry.holidays,
+            stale: true,
+            error: "calendar_fetch_failed",
+          },
+          { headers: CACHE_HEADERS },
+        );
       }
 
       const message = e instanceof Error ? e.message : "calendar_fetch_failed";
@@ -406,33 +430,33 @@ export async function GET(req: Request) {
         // Feed is treated as UTC.
         const utcMillis = Date.UTC(d.year, d.month - 1, d.day, t.h, t.m, 0, 0);
         const dt = new Date(utcMillis);
-        const istTime = formatTimeForTz(dt, LOCAL_DISPLAY_TIME_ZONE);
-        const istDate = getDayKeyForTz(dt, LOCAL_DISPLAY_TIME_ZONE);
+        const displayTime = formatTimeForTz(dt, tz);
+        const displayDate = getDayKeyForTz(dt, tz);
 
         return {
           ...e,
-          time: istTime || e.time,
-          date: istDate || e.date,
+          time: displayTime || e.time,
+          date: displayDate || e.date,
         };
       })
-      // Keep only today's (IST) events. Also prevent accidental bleed from other days.
-      .filter((e) => e.date === istToday)
+      // Keep only today's events in the requested timezone.
+      .filter((e) => e.date === today)
       .slice()
       .sort((a, b) => {
         return parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time);
       });
 
-    // Convert holiday dates to IST date keys for filtering
+    // Convert holiday dates to the requested timezone for filtering
     const holidays = rawHolidays
       .map((h) => {
         const d = parseFeedDateMMDDYYYY(h.date);
         if (!d) return h;
         const utcMillis = Date.UTC(d.year, d.month - 1, d.day, 12, 0, 0, 0);
         const dt = new Date(utcMillis);
-        const istDate = getDayKeyForTz(dt, LOCAL_DISPLAY_TIME_ZONE);
-        return { ...h, date: istDate || h.date };
+        const displayDate = getDayKeyForTz(dt, tz);
+        return { ...h, date: displayDate || h.date };
       })
-      .filter((h) => h.date === istToday);
+      .filter((h) => h.date === today);
 
     return { events, holidays };
   })();
@@ -442,15 +466,20 @@ export async function GET(req: Request) {
     const { events, holidays } = await fetchPromise;
     cache.set(key, { fetchedAt: now, today, data: events, holidays });
     const noNews = events.length === 0;
-    return NextResponse.json({
-      source: "ff",
-      tz,
-      today,
-      events,
-      holidays,
-      noNews,
-      ...(noNews ? { message: "No high-impact news today — market will show less momentum." } : {}),
-    });
+    return NextResponse.json(
+      {
+        source: "ff",
+        tz,
+        today,
+        events,
+        holidays,
+        noNews,
+        ...(noNews
+          ? { message: "No high-impact news today — market will show less momentum." }
+          : {}),
+      },
+      { headers: CACHE_HEADERS },
+    );
   } catch (e) {
     const entry = cache.get(key);
     const message = e instanceof Error ? e.message : "calendar_fetch_failed";
@@ -458,16 +487,19 @@ export async function GET(req: Request) {
       e && typeof e === "object" && "details" in e ? String((e as any).details) : undefined;
 
     if (entry?.data?.length) {
-      return NextResponse.json({
-        source: "ff",
-        tz,
-        today: entry.today,
-        events: entry.data,
-        holidays: entry.holidays,
-        stale: true,
-        error: message,
-        details,
-      });
+      return NextResponse.json(
+        {
+          source: "ff",
+          tz,
+          today: entry.today,
+          events: entry.data,
+          holidays: entry.holidays,
+          stale: true,
+          error: message,
+          details,
+        },
+        { headers: CACHE_HEADERS },
+      );
     }
 
     return NextResponse.json(

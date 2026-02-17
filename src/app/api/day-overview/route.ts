@@ -29,6 +29,12 @@ let overviewCache:
   }
   | undefined;
 
+let inflight: Promise<string> | undefined;
+
+const CACHE_HEADERS = {
+  "Cache-Control": "private, max-age=0, s-maxage=300, stale-while-revalidate=1800",
+};
+
 function buildCacheKey(body: Body, model: string) {
   const titles = body.events
     .slice(0, 12)
@@ -68,7 +74,7 @@ export async function POST(req: Request) {
         error:
           "OpenRouter not configured. Set OPENROUTER_API_KEY in .env and restart.",
       },
-      { status: 501 },
+      { status: 501, headers: CACHE_HEADERS },
     );
   }
 
@@ -80,7 +86,7 @@ export async function POST(req: Request) {
   if (!hasEvents && !hasHolidays) {
     return NextResponse.json(
       { error: "no_events_or_holidays" },
-      { status: 400 },
+      { status: 400, headers: CACHE_HEADERS },
     );
   }
 
@@ -88,8 +94,16 @@ export async function POST(req: Request) {
   const ttlMs = 24 * 60 * 60 * 1000;
   if (overviewCache && overviewCache.key === cacheKey) {
     if (Date.now() - overviewCache.fetchedAt < ttlMs) {
-      return NextResponse.json({ overview: overviewCache.overview, cached: true });
+      return NextResponse.json(
+        { overview: overviewCache.overview, cached: true },
+        { headers: CACHE_HEADERS },
+      );
     }
+  }
+
+  if (inflight) {
+    const overview = await inflight;
+    return NextResponse.json({ overview, cached: true }, { headers: CACHE_HEADERS });
   }
 
   // Build holiday context line
@@ -193,48 +207,57 @@ export async function POST(req: Request) {
     return json.choices?.[0]?.message?.content?.trim() ?? "";
   }
 
-  let overview = await callOpenRouter(payloadBase.messages, 700);
-  if (!overview) overview = await callOpenRouter(payloadBase.messages, 950);
+  inflight = (async () => {
+    let overview = await callOpenRouter(payloadBase.messages, 700);
+    if (!overview) overview = await callOpenRouter(payloadBase.messages, 950);
 
-  if (!overview) {
-    return NextResponse.json({ error: "openrouter_empty_response" }, { status: 502 });
+    if (!overview) {
+      throw new Error("openrouter_empty_response");
+    }
+
+    if (!isOverviewComplete(overview)) {
+      const rewritePrompt =
+        "Rewrite the SAME brief strictly shorter. Keep DATE, OVERVIEW, and SCENARIOS only, and finish every sentence. Do NOT add anything else.";
+      const messages = [
+        ...payloadBase.messages,
+        { role: "assistant" as const, content: overview },
+        { role: "user" as const, content: rewritePrompt },
+      ];
+
+      const next = await callOpenRouter(messages, 650);
+      if (next && isOverviewComplete(next)) overview = next;
+    }
+
+    if (!isOverviewComplete(overview)) {
+      const finalPrompt =
+        "Try again from scratch. Output MUST contain DATE, OVERVIEW, and SCENARIOS only, and must end with a period. Keep it very short.";
+      const messages = [
+        payloadBase.messages[0],
+        { role: "user" as const, content: `${prompt}\n\n${finalPrompt}` },
+      ];
+      const next = await callOpenRouter(messages, 1100);
+      if (next && isOverviewComplete(next)) overview = next;
+    }
+
+    if (!isOverviewComplete(overview)) {
+      throw new Error("openrouter_incomplete_response");
+    }
+
+    overviewCache = {
+      key: cacheKey,
+      fetchedAt: Date.now(),
+      overview,
+    };
+    return overview;
+  })();
+
+  try {
+    const overview = await inflight;
+    return NextResponse.json({ overview }, { headers: CACHE_HEADERS });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "openrouter_failed";
+    return NextResponse.json({ error: message }, { status: 502, headers: CACHE_HEADERS });
+  } finally {
+    inflight = undefined;
   }
-
-  if (!isOverviewComplete(overview)) {
-    const rewritePrompt =
-      "Rewrite the SAME brief strictly shorter. Keep DATE, OVERVIEW, and SCENARIOS only, and finish every sentence. Do NOT add anything else.";
-    const messages = [
-      ...payloadBase.messages,
-      { role: "assistant" as const, content: overview },
-      { role: "user" as const, content: rewritePrompt },
-    ];
-
-    const next = await callOpenRouter(messages, 650);
-    if (next && isOverviewComplete(next)) overview = next;
-  }
-
-  if (!isOverviewComplete(overview)) {
-    const finalPrompt =
-      "Try again from scratch. Output MUST contain DATE, OVERVIEW, and SCENARIOS only, and must end with a period. Keep it very short.";
-    const messages = [
-      payloadBase.messages[0],
-      { role: "user" as const, content: `${prompt}\n\n${finalPrompt}` },
-    ];
-    const next = await callOpenRouter(messages, 1100);
-    if (next && isOverviewComplete(next)) overview = next;
-  }
-
-  if (!isOverviewComplete(overview)) {
-    return NextResponse.json(
-      { error: "openrouter_incomplete_response" },
-      { status: 502 },
-    );
-  }
-
-  overviewCache = {
-    key: cacheKey,
-    fetchedAt: Date.now(),
-    overview,
-  };
-  return NextResponse.json({ overview });
 }

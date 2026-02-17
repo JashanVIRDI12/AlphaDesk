@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useSession } from "next-auth/react";
 
-import { Badge } from "@/components/ui/badge";
 import type { MarketSession } from "@/data/market";
 import { getAggregateMarketStatus } from "@/data/market";
 
@@ -53,12 +52,6 @@ export function Greeting({
         <h1 className="text-2xl font-semibold tracking-tight md:text-[34px] md:leading-[38px]">
           {mounted && personalTitle ? personalTitle : title}
         </h1>
-        <Badge
-          variant="outline"
-          className="rounded-full border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] font-medium tracking-wide text-zinc-100"
-        >
-          TERMINAL OVERVIEW
-        </Badge>
       </div>
       {subtitle && (
         <p className="max-w-2xl text-[13px] leading-5 text-muted-foreground md:text-[15px] md:leading-6">

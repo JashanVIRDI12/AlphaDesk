@@ -10,8 +10,13 @@ export function LandingFooter() {
                     <div>
                         <div className="flex items-center gap-2">
                             <TrendingUp className="h-4 w-4 text-zinc-500" />
-                            <span className="text-[14px] font-bold tracking-tight">
-                                Get<span className="text-zinc-600">TradingBias</span>
+                            <span className="flex items-center gap-2">
+                                <span className="text-[14px] font-bold tracking-tight">
+                                    Get<span className="text-zinc-600">TradingBias</span>
+                                </span>
+                                <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[9px] font-semibold tracking-[0.18em] text-zinc-400">
+                                    BETA
+                                </span>
                             </span>
                         </div>
                         <p className="mt-2.5 max-w-[260px] text-[11.5px] leading-[1.6] text-zinc-700">

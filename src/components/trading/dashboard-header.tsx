@@ -5,13 +5,10 @@ import * as React from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 
-import { Bell, TrendingUp } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 
 import { AuthControls } from "@/components/auth/auth-controls";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function DashboardHeader() {
   const { data: session } = useSession();
@@ -34,7 +31,12 @@ export function DashboardHeader() {
             <TrendingUp className="relative h-4 w-4 text-zinc-200" />
           </div>
           <div>
-            <div className="text-[13px] font-semibold tracking-tight">GetTradingBias</div>
+            <div className="flex items-center gap-2">
+              <div className="text-[13px] font-semibold tracking-tight">GetTradingBias</div>
+              <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[9px] font-semibold tracking-[0.18em] text-zinc-200/90">
+                BETA
+              </span>
+            </div>
             <div className="hidden text-[10px] font-medium tracking-wide text-muted-foreground sm:block">
               INSTITUTIONAL TERMINAL
             </div>
@@ -42,23 +44,7 @@ export function DashboardHeader() {
         </Link>
 
         <div className="flex items-center gap-0.5 sm:gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-full transition-colors hover:bg-white/[0.06]"
-              >
-                <Bell className="h-4 w-4" />
-                <span className="sr-only">Notifications</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Notifications</TooltipContent>
-          </Tooltip>
-
           <AuthControls />
-
-          <ThemeToggle />
 
           <Avatar className="ml-1 h-9 w-9 ring-1 ring-white/10">
             <AvatarFallback className="bg-white/[0.04] text-[11px] font-medium">

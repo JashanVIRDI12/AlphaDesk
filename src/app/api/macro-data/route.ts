@@ -30,7 +30,13 @@ let cache:
     }
     | undefined;
 
+let inflight: Promise<MacroDataResponse> | undefined;
+
 const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+
+const CACHE_HEADERS = {
+    "Cache-Control": "private, max-age=0, s-maxage=3600, stale-while-revalidate=21600",
+};
 
 /* ── Scrape Trading Economics public summary pages ── */
 async function fetchTradingEconomicsData(): Promise<
@@ -170,11 +176,17 @@ export async function GET() {
 
     // Return cached data if fresh
     if (cache && now - cache.fetchedAt < CACHE_TTL) {
-        return NextResponse.json({ ...cache.data, cached: true });
+        return NextResponse.json({ ...cache.data, cached: true }, { headers: CACHE_HEADERS });
     }
 
-    try {
-        const liveData = await fetchTradingEconomicsData();
+    if (inflight) {
+        const data = await inflight;
+        return NextResponse.json({ ...data, cached: true }, { headers: CACHE_HEADERS });
+    }
+
+    inflight = (async () => {
+        try {
+            const liveData = await fetchTradingEconomicsData();
 
         // Merge live data with static fallback for any missing fields
         const fallback = getStaticFallbackData();
@@ -217,18 +229,23 @@ export async function GET() {
             fetchedAt: nowStr,
         };
 
-        // Cache the result
-        cache = {
-            fetchedAt: now,
-            data: responseData,
-        };
+            // Cache the result
+            cache = {
+                fetchedAt: now,
+                data: responseData,
+            };
 
-        return NextResponse.json(responseData);
-    } catch (err) {
-        console.error("[macro-data] Failed to fetch live data:", err);
+            return responseData;
+        } catch (err) {
+            console.error("[macro-data] Failed to fetch live data:", err);
+            return getStaticFallbackData();
+        }
+    })();
 
-        // Return static fallback
-        const fallback = getStaticFallbackData();
-        return NextResponse.json(fallback);
+    try {
+        const data = await inflight;
+        return NextResponse.json(data, { headers: CACHE_HEADERS });
+    } finally {
+        inflight = undefined;
     }
 }
