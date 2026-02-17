@@ -275,7 +275,7 @@ export function HeroSection() {
 
                     <h1 className="relative mx-auto max-w-4xl text-center text-[clamp(2.5rem,5.5vw,4.5rem)] font-bold leading-[1.08] tracking-[-0.03em] perspective-[1000px]">
                         <span className="bg-gradient-to-b from-white via-zinc-300 to-zinc-500 bg-clip-text text-transparent">
-                            {mounted && <SplitText text="The Terminal Built" />}
+                            {mounted ? <SplitText text="The Terminal Built" /> : "The Terminal Built"}
                         </span>
                         <br className="hidden sm:block" />
                         <motion.span
