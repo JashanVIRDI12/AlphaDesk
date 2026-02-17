@@ -179,6 +179,19 @@ export function FundamentalsPanel({
   const selectedTzOption = TIMEZONE_OPTIONS.find((t) => t.value === selectedTz)!;
 
   const [todayKey, setTodayKey] = React.useState<string | null>(null);
+  const [calendarGeneratedAt, setCalendarGeneratedAt] = React.useState<string | null>(null);
+  const [, forceFreshnessTick] = React.useState(0);
+
+  const calendarUpdatedLabel = React.useMemo(() => {
+    if (!calendarGeneratedAt) return null;
+    const diff = Date.now() - new Date(calendarGeneratedAt).getTime();
+    if (!Number.isFinite(diff)) return null;
+    const mins = Math.floor(diff / 60_000);
+    if (mins < 1) return "Last updated just now";
+    if (mins < 60) return `Last updated ${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    return `Last updated ${hrs}h ago`;
+  }, [calendarGeneratedAt]);
 
   const [overviewLoading, setOverviewLoading] = React.useState(false);
   const [overviewError, setOverviewError] = React.useState<string | null>(null);
@@ -200,6 +213,7 @@ export function FundamentalsPanel({
     today: string | null;
     noNews: boolean;
     message: string | null;
+    generatedAt: string | null;
   };
 
   function readCalendarCache(tz: string): CalendarCache | null {
@@ -240,6 +254,7 @@ export function FundamentalsPanel({
           today?: string;
           events?: CalendarEvent[];
           holidays?: BankHoliday[];
+          generatedAt?: string;
           error?: string;
           details?: string;
           noNews?: boolean;
@@ -260,6 +275,7 @@ export function FundamentalsPanel({
           setNoNews(data.noNews === true);
           setNoNewsMessage(data.message ?? null);
           setHolidays(data.holidays ?? []);
+          setCalendarGeneratedAt(typeof data.generatedAt === "string" ? data.generatedAt : new Date().toISOString());
 
           writeCalendarCache(selectedTz, {
             fetchedAt: Date.now(),
@@ -268,6 +284,7 @@ export function FundamentalsPanel({
             today: data.today ?? nextEvents.find((e) => e.date)?.date ?? null,
             noNews: data.noNews === true,
             message: data.message ?? null,
+            generatedAt: typeof data.generatedAt === "string" ? data.generatedAt : null,
           });
         }
       } catch (e) {
@@ -284,6 +301,7 @@ export function FundamentalsPanel({
       setNoNews(cached.noNews);
       setNoNewsMessage(cached.message);
       setHolidays(cached.holidays);
+      setCalendarGeneratedAt(cached.generatedAt ?? new Date(cached.fetchedAt).toISOString());
       setLoading(false);
       load(true);
     } else {
@@ -291,9 +309,11 @@ export function FundamentalsPanel({
     }
 
     const id = window.setInterval(() => load(true), 10 * 60 * 1000);
+    const ticker = window.setInterval(() => forceFreshnessTick((v) => (v + 1) % 10_000), 60 * 1000);
     return () => {
       cancelled = true;
       window.clearInterval(id);
+      window.clearInterval(ticker);
     };
   }, [selectedTz]);
 
@@ -470,6 +490,12 @@ export function FundamentalsPanel({
               </div>
             )}
           </div>
+
+          {!loading && !error && calendarUpdatedLabel ? (
+            <div className="-mt-1 text-[9px] tracking-wide text-zinc-700">
+              {calendarUpdatedLabel}
+            </div>
+          ) : null}
 
           {error && !loading ? (
             <div className="rounded-lg border border-white/[0.04] bg-white/[0.015] px-3 py-2 text-[10px] text-zinc-600">

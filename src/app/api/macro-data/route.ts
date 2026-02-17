@@ -176,12 +176,18 @@ export async function GET() {
 
     // Return cached data if fresh
     if (cache && now - cache.fetchedAt < CACHE_TTL) {
-        return NextResponse.json({ ...cache.data, cached: true }, { headers: CACHE_HEADERS });
+        return NextResponse.json(
+            { ...cache.data, cached: true, generatedAt: cache.data.fetchedAt },
+            { headers: CACHE_HEADERS },
+        );
     }
 
     if (inflight) {
         const data = await inflight;
-        return NextResponse.json({ ...data, cached: true }, { headers: CACHE_HEADERS });
+        return NextResponse.json(
+            { ...data, cached: true, generatedAt: data.fetchedAt },
+            { headers: CACHE_HEADERS },
+        );
     }
 
     inflight = (async () => {
@@ -244,7 +250,7 @@ export async function GET() {
 
     try {
         const data = await inflight;
-        return NextResponse.json(data, { headers: CACHE_HEADERS });
+        return NextResponse.json({ ...data, generatedAt: data.fetchedAt }, { headers: CACHE_HEADERS });
     } finally {
         inflight = undefined;
     }

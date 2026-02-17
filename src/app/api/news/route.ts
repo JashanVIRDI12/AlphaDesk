@@ -154,6 +154,7 @@ export async function GET() {
             headlines: cache.headlines,
             cached: true,
             count: cache.headlines.length,
+            generatedAt: new Date(cache.fetchedAt).toISOString(),
             },
             { headers: CACHE_HEADERS },
         );
@@ -166,6 +167,7 @@ export async function GET() {
                 headlines,
                 cached: true,
                 count: headlines.length,
+                generatedAt: new Date(cache?.fetchedAt ?? Date.now()).toISOString(),
             },
             { headers: CACHE_HEADERS },
         );
@@ -216,6 +218,7 @@ export async function GET() {
                 headlines,
                 cached: false,
                 count: headlines.length,
+                generatedAt: new Date(cache?.fetchedAt ?? Date.now()).toISOString(),
             },
             { headers: CACHE_HEADERS },
         );

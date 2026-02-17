@@ -36,6 +36,7 @@ type BankHoliday = {
 type FeedResult = {
   events: CalendarEvent[];
   holidays: BankHoliday[];
+  tomorrowEvents?: CalendarEvent[];
 };
 
 type CacheEntry = {
@@ -43,6 +44,8 @@ type CacheEntry = {
   today: string;
   data: CalendarEvent[];
   holidays: BankHoliday[];
+  tomorrow?: string;
+  tomorrowData?: CalendarEvent[];
   cooldownUntil?: number;
 };
 
@@ -327,14 +330,31 @@ function getTodayKey(timeZone: string): string {
   return `${month}-${day}-${year}`;
 }
 
+function getRelativeDayKey(timeZone: string, offsetDays: number): string {
+  const dt = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(dt);
+
+  const month = parts.find((p) => p.type === "month")?.value ?? "01";
+  const day = parts.find((p) => p.type === "day")?.value ?? "01";
+  const year = parts.find((p) => p.type === "year")?.value ?? "1970";
+  return `${month}-${day}-${year}`;
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const tzParam = url.searchParams.get("tz")?.trim();
   const tz = tzParam && isValidTimeZone(tzParam) ? tzParam : DEFAULT_CALENDAR_TIME_ZONE;
+  const includeTomorrow = url.searchParams.get("includeTomorrow") === "1";
 
   const now = Date.now();
   const today = getTodayKey(tz);
-  const key = `${tz}::${today}`;
+  const tomorrow = includeTomorrow ? getRelativeDayKey(tz, 1) : null;
+  const key = `${tz}::${today}::${includeTomorrow ? "t2" : "t1"}`;
 
   const cached = cache.get(key);
   if (cached?.cooldownUntil && now < cached.cooldownUntil) {
@@ -345,6 +365,13 @@ export async function GET(req: Request) {
         today: cached.today,
         events: cached.data,
         holidays: cached.holidays,
+        ...(includeTomorrow
+          ? {
+            tomorrow: cached.tomorrow ?? tomorrow ?? undefined,
+            tomorrowEvents: cached.tomorrowData ?? [],
+          }
+          : {}),
+        generatedAt: new Date(cached.fetchedAt).toISOString(),
         stale: true,
         error: "calendar_rate_limited",
       },
@@ -365,6 +392,13 @@ export async function GET(req: Request) {
         events: cached.data,
         holidays: cached.holidays,
         cached: true,
+        ...(includeTomorrow
+          ? {
+            tomorrow: cached.tomorrow ?? tomorrow ?? undefined,
+            tomorrowEvents: cached.tomorrowData ?? [],
+          }
+          : {}),
+        generatedAt: new Date(cached.fetchedAt).toISOString(),
         noNews,
         ...(noNews
           ? { message: "No high-impact news today — market will show less momentum." }
@@ -378,7 +412,15 @@ export async function GET(req: Request) {
   if (existing) {
     try {
       const result = await existing;
-      cache.set(key, { fetchedAt: now, today, data: result.events, holidays: result.holidays });
+      cache.set(key, {
+        fetchedAt: now,
+        today,
+        data: result.events,
+        holidays: result.holidays,
+        ...(includeTomorrow
+          ? { tomorrow: tomorrow ?? undefined, tomorrowData: result.tomorrowEvents ?? [] }
+          : {}),
+      });
       return NextResponse.json(
         {
           source: "ff",
@@ -387,6 +429,13 @@ export async function GET(req: Request) {
           events: result.events,
           holidays: result.holidays,
           cached: true,
+          ...(includeTomorrow
+            ? {
+              tomorrow: tomorrow ?? undefined,
+              tomorrowEvents: result.tomorrowEvents ?? [],
+            }
+            : {}),
+          generatedAt: new Date(now).toISOString(),
         },
         { headers: CACHE_HEADERS },
       );
@@ -400,6 +449,13 @@ export async function GET(req: Request) {
             today: entry.today,
             events: entry.data,
             holidays: entry.holidays,
+            ...(includeTomorrow
+              ? {
+                tomorrow: entry.tomorrow ?? tomorrow ?? undefined,
+                tomorrowEvents: entry.tomorrowData ?? [],
+              }
+              : {}),
+            generatedAt: new Date(entry.fetchedAt).toISOString(),
             stale: true,
             error: "calendar_fetch_failed",
           },
@@ -417,11 +473,11 @@ export async function GET(req: Request) {
     }
   }
 
-  const fetchPromise = (async (): Promise<FeedResult> => {
+  const fetchPromise = (async (): Promise<FeedResult & { tomorrowEvents?: CalendarEvent[] }> => {
     const xml = await getFeedXml();
     const { events: rawEvents, holidays: rawHolidays } = parseFeed(xml);
 
-    const events = rawEvents
+    const converted = rawEvents
       .map((e) => {
         const d = parseFeedDateMMDDYYYY(e.date);
         const t = parseTimeToHM(e.time);
@@ -439,12 +495,17 @@ export async function GET(req: Request) {
           date: displayDate || e.date,
         };
       })
-      // Keep only today's events in the requested timezone.
+      .slice();
+
+    const events = converted
       .filter((e) => e.date === today)
-      .slice()
-      .sort((a, b) => {
-        return parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time);
-      });
+      .sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
+
+    const tomorrowEvents = includeTomorrow && tomorrow
+      ? converted
+        .filter((e) => e.date === tomorrow)
+        .sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time))
+      : [];
 
     // Convert holiday dates to the requested timezone for filtering
     const holidays = rawHolidays
@@ -458,13 +519,21 @@ export async function GET(req: Request) {
       })
       .filter((h) => h.date === today);
 
-    return { events, holidays };
+    return { events, holidays, ...(includeTomorrow ? { tomorrowEvents } : {}) };
   })();
 
   inflight.set(key, fetchPromise);
   try {
-    const { events, holidays } = await fetchPromise;
-    cache.set(key, { fetchedAt: now, today, data: events, holidays });
+    const { events, holidays, tomorrowEvents } = await fetchPromise;
+    cache.set(key, {
+      fetchedAt: now,
+      today,
+      data: events,
+      holidays,
+      ...(includeTomorrow
+        ? { tomorrow: tomorrow ?? undefined, tomorrowData: tomorrowEvents ?? [] }
+        : {}),
+    });
     const noNews = events.length === 0;
     return NextResponse.json(
       {
@@ -473,6 +542,10 @@ export async function GET(req: Request) {
         today,
         events,
         holidays,
+        ...(includeTomorrow
+          ? { tomorrow: tomorrow ?? undefined, tomorrowEvents: tomorrowEvents ?? [] }
+          : {}),
+        generatedAt: new Date(now).toISOString(),
         noNews,
         ...(noNews
           ? { message: "No high-impact news today — market will show less momentum." }
@@ -494,6 +567,13 @@ export async function GET(req: Request) {
           today: entry.today,
           events: entry.data,
           holidays: entry.holidays,
+          ...(includeTomorrow
+            ? {
+              tomorrow: entry.tomorrow ?? tomorrow ?? undefined,
+              tomorrowEvents: entry.tomorrowData ?? [],
+            }
+            : {}),
+          generatedAt: new Date(entry.fetchedAt).toISOString(),
           stale: true,
           error: message,
           details,

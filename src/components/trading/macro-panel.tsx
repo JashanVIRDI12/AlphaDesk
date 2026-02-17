@@ -173,6 +173,19 @@ export function MacroPanel() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [refreshing, setRefreshing] = React.useState(false);
+  const [, forceFreshnessTick] = React.useState(0);
+
+  const macroSnapshotLabel = React.useMemo(() => {
+    const t = macroIndicators?.fetchedAt;
+    if (!t) return null;
+    const diff = Date.now() - new Date(t).getTime();
+    if (!Number.isFinite(diff)) return null;
+    const mins = Math.floor(diff / 60_000);
+    if (mins < 1) return "Last updated just now";
+    if (mins < 60) return `Last updated ${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    return `Last updated ${hrs}h ago`;
+  }, [macroIndicators?.fetchedAt]);
 
   const fetchMacro = React.useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -208,7 +221,14 @@ export function MacroPanel() {
   React.useEffect(() => {
     fetchMacro();
     const id = window.setInterval(() => fetchMacro(true), 30 * 60 * 1000);
-    return () => window.clearInterval(id);
+    const ticker = window.setInterval(
+      () => forceFreshnessTick((v) => (v + 1) % 10_000),
+      60 * 1000,
+    );
+    return () => {
+      window.clearInterval(id);
+      window.clearInterval(ticker);
+    };
   }, [fetchMacro]);
 
   /* ── Skeleton ── */
@@ -357,6 +377,11 @@ export function MacroPanel() {
                 Macro Snapshot
               </span>
               <div className="h-px flex-1 bg-gradient-to-r from-white/[0.04] to-transparent" />
+              {macroSnapshotLabel ? (
+                <span className="text-[9px] tracking-wide text-zinc-700">
+                  {macroSnapshotLabel}
+                </span>
+              ) : null}
             </div>
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               {(["USD", "EUR", "GBP", "JPY"] as const).map((currency) => (

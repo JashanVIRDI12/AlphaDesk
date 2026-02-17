@@ -26,6 +26,19 @@ export function NewsHeadlines() {
     const [headlines, setHeadlines] = React.useState<Headline[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
+    const [generatedAt, setGeneratedAt] = React.useState<string | null>(null);
+    const [, forceTick] = React.useState(0);
+
+    const updatedLabel = React.useMemo(() => {
+        if (!generatedAt) return null;
+        const diff = Date.now() - new Date(generatedAt).getTime();
+        if (!Number.isFinite(diff)) return null;
+        const mins = Math.floor(diff / 60_000);
+        if (mins < 1) return "Last updated just now";
+        if (mins < 60) return `Last updated ${mins}m ago`;
+        const hrs = Math.floor(mins / 60);
+        return `Last updated ${hrs}h ago`;
+    }, [generatedAt]);
 
     React.useEffect(() => {
         let cancelled = false;
@@ -37,6 +50,7 @@ export function NewsHeadlines() {
                 const data = await res.json();
                 if (!cancelled) {
                     setHeadlines(data.headlines ?? []);
+                    setGeneratedAt(typeof data.generatedAt === "string" ? data.generatedAt : null);
                     setError(null);
                 }
             } catch (e) {
@@ -50,9 +64,11 @@ export function NewsHeadlines() {
 
         load();
         const id = window.setInterval(load, 5 * 60 * 1000);
+        const ticker = window.setInterval(() => forceTick((v) => (v + 1) % 10_000), 60 * 1000);
         return () => {
             cancelled = true;
             window.clearInterval(id);
+            window.clearInterval(ticker);
         };
     }, []);
 
@@ -89,6 +105,11 @@ export function NewsHeadlines() {
                         )}
                     </div>
                 </div>
+                {!loading && !error && updatedLabel ? (
+                    <div className="mt-1 text-[9px] tracking-wide text-zinc-600">
+                        {updatedLabel}
+                    </div>
+                ) : null}
             </CardHeader>
 
             <CardContent className="px-4 pb-3.5 pt-0">
