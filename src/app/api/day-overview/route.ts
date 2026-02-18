@@ -63,6 +63,12 @@ function isOverviewComplete(text: string) {
   return true;
 }
 
+function sanitizeOpenRouterError(status: number, rawText: string) {
+  if (status === 429) return "rate_limited";
+  if (status >= 500) return "provider_unavailable";
+  return `openrouter_failed_${status}`;
+}
+
 export async function POST(req: Request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   const model = process.env.OPENROUTER_MODEL || "google/gemini-3-flash-preview";
@@ -197,7 +203,9 @@ export async function POST(req: Request) {
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`openrouter_failed_${res.status}: ${text.slice(0, 600)}`);
+      const safeCode = sanitizeOpenRouterError(res.status, text);
+      console.error(`[day-overview] OpenRouter error ${res.status}:`, text.slice(0, 300));
+      throw new Error(safeCode);
     }
 
     const json = (await res.json()) as {
@@ -256,6 +264,32 @@ export async function POST(req: Request) {
     return NextResponse.json({ overview }, { headers: CACHE_HEADERS });
   } catch (e) {
     const message = e instanceof Error ? e.message : "openrouter_failed";
+    if (message === "rate_limited") {
+      if (overviewCache && overviewCache.key === cacheKey) {
+        return NextResponse.json(
+          { overview: overviewCache.overview, cached: true, stale: true },
+          { headers: CACHE_HEADERS },
+        );
+      }
+      return NextResponse.json(
+        { error: "rate_limited" },
+        { status: 429, headers: CACHE_HEADERS },
+      );
+    }
+
+    if (message === "provider_unavailable") {
+      if (overviewCache && overviewCache.key === cacheKey) {
+        return NextResponse.json(
+          { overview: overviewCache.overview, cached: true, stale: true },
+          { headers: CACHE_HEADERS },
+        );
+      }
+      return NextResponse.json(
+        { error: "provider_unavailable" },
+        { status: 503, headers: CACHE_HEADERS },
+      );
+    }
+
     return NextResponse.json({ error: message }, { status: 502, headers: CACHE_HEADERS });
   } finally {
     inflight = undefined;

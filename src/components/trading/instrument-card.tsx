@@ -35,12 +35,14 @@ const TV_CHART_LINKS: Record<string, string> = {
   EURUSD: "https://www.tradingview.com/chart/?symbol=FX:EURUSD",
   GBPUSD: "https://www.tradingview.com/chart/?symbol=FX:GBPUSD",
   USDJPY: "https://www.tradingview.com/chart/?symbol=FX:USDJPY",
+  XAUUSD: "https://www.tradingview.com/chart/?symbol=OANDA:XAUUSD",
 };
 
 const TV_WIDGET_SYMBOLS: Record<string, string> = {
   EURUSD: "FX:EURUSD",
   GBPUSD: "FX:GBPUSD",
   USDJPY: "FX:USDJPY",
+  XAUUSD: "OANDA:XAUUSD",
 };
 
 /* ── Mini TradingView Chart ── */

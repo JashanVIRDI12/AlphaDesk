@@ -43,6 +43,7 @@ const INSTRUMENTS = [
     { symbol: "EURUSD", displayName: "Euro / Dollar", yahoo: "EURUSD=X" },
     { symbol: "GBPUSD", displayName: "Cable", yahoo: "GBPUSD=X" },
     { symbol: "USDJPY", displayName: "Dollar / Yen", yahoo: "USDJPY=X" },
+    { symbol: "XAUUSD", displayName: "Gold / Dollar", yahoo: "XAUUSD=X" },
 ];
 
 /* ────────────────────────────────────────────────────────────────────
@@ -100,6 +101,111 @@ type TechnicalSnapshot = {
     nearest_support: number;
     nearest_resistance: number;
 };
+
+type YahooQuoteSnapshot = {
+    symbol: string;
+    last: number;
+    prevClose: number;
+    changePct: number;
+    volume: number;
+    avgVolume: number;
+};
+
+type GoldMarketContext = {
+    dxy: YahooQuoteSnapshot | null;
+    us10y: YahooQuoteSnapshot | null;
+    tip: YahooQuoteSnapshot | null;
+    gld: YahooQuoteSnapshot | null;
+    realYieldSignal: "up" | "down" | "neutral";
+    etfFlowSignal: "inflow" | "outflow" | "neutral";
+    text: string;
+};
+
+async function fetchYahooQuoteSnapshot(yahooSymbol: string): Promise<YahooQuoteSnapshot | null> {
+    try {
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=1mo`;
+        const res = await fetch(url, {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (compatible; GetTradingBias/1.0)",
+            },
+            signal: AbortSignal.timeout(8000),
+        });
+
+        if (!res.ok) return null;
+        const data = await res.json();
+        const result = data?.chart?.result?.[0];
+        const quote = result?.indicators?.quote?.[0];
+        const closes = ((quote?.close as Array<number | null> | undefined) ?? [])
+            .filter((v): v is number => typeof v === "number" && Number.isFinite(v) && v > 0);
+        const volumes = ((quote?.volume as Array<number | null> | undefined) ?? [])
+            .filter((v): v is number => typeof v === "number" && Number.isFinite(v) && v >= 0);
+
+        if (closes.length < 2) return null;
+        const last = closes[closes.length - 1];
+        const prevClose = closes[closes.length - 2];
+        const changePct = ((last - prevClose) / prevClose) * 100;
+
+        const lastVolume = volumes.length > 0 ? volumes[volumes.length - 1] : 0;
+        const volWindow = volumes.slice(-10);
+        const avgVolume =
+            volWindow.length > 0
+                ? volWindow.reduce((sum, v) => sum + v, 0) / volWindow.length
+                : 0;
+
+        return {
+            symbol: yahooSymbol,
+            last,
+            prevClose,
+            changePct: Math.round(changePct * 1000) / 1000,
+            volume: lastVolume,
+            avgVolume: Math.round(avgVolume),
+        };
+    } catch {
+        return null;
+    }
+}
+
+async function fetchGoldMarketContext(): Promise<GoldMarketContext> {
+    const [dxy, us10y, tip, gld] = await Promise.all([
+        fetchYahooQuoteSnapshot("DX-Y.NYB"), // Dollar index
+        fetchYahooQuoteSnapshot("^TNX"), // US 10Y nominal yield
+        fetchYahooQuoteSnapshot("TIP"), // TIPS ETF proxy for real-yield direction
+        fetchYahooQuoteSnapshot("GLD"), // Gold ETF flow proxy
+    ]);
+
+    let realYieldSignal: "up" | "down" | "neutral" = "neutral";
+    if (us10y && tip) {
+        if (us10y.changePct > 0.3 && tip.changePct < 0) realYieldSignal = "up";
+        else if (us10y.changePct < -0.3 && tip.changePct > 0) realYieldSignal = "down";
+    }
+
+    let etfFlowSignal: "inflow" | "outflow" | "neutral" = "neutral";
+    if (gld && gld.avgVolume > 0) {
+        const volumeRatio = gld.volume / gld.avgVolume;
+        if (volumeRatio >= 1.3 && gld.changePct > 0) etfFlowSignal = "inflow";
+        else if (volumeRatio >= 1.3 && gld.changePct < 0) etfFlowSignal = "outflow";
+    }
+
+    const dxyText = dxy
+        ? `DXY ${dxy.last.toFixed(2)} (${dxy.changePct >= 0 ? "+" : ""}${dxy.changePct.toFixed(2)}% d/d)`
+        : "DXY unavailable";
+    const realYieldText = us10y && tip
+        ? `US real-yield proxy: 10Y ${us10y.last.toFixed(2)} (${us10y.changePct >= 0 ? "+" : ""}${us10y.changePct.toFixed(2)}%) vs TIP ${tip.last.toFixed(2)} (${tip.changePct >= 0 ? "+" : ""}${tip.changePct.toFixed(2)}%) => ${realYieldSignal}`
+        : "US real-yield proxy unavailable";
+    const gldText = gld && gld.avgVolume > 0
+        ? `GLD ${gld.last.toFixed(2)} (${gld.changePct >= 0 ? "+" : ""}${gld.changePct.toFixed(2)}%) vol ${Math.round(gld.volume / 1_000_000)}M vs avg ${Math.round(gld.avgVolume / 1_000_000)}M => ${etfFlowSignal}`
+        : "GLD flow proxy unavailable";
+
+    return {
+        dxy,
+        us10y,
+        tip,
+        gld,
+        realYieldSignal,
+        etfFlowSignal,
+        text: `${dxyText}\n${realYieldText}\n${gldText}`,
+    };
+}
 
 async function fetchTechnicalData(
     yahooSymbol: string,
@@ -237,9 +343,10 @@ function formatTechnicalContext(snapshots: (TechnicalSnapshot | null)[]): string
 
     return valid
         .map((s) => {
-            const pip = s.symbol.includes("JPY") ? 100 : 10000;
-            const fmt = (v: number) =>
-                s.symbol.includes("JPY") ? v.toFixed(3) : v.toFixed(5);
+            const fmt = (v: number) => {
+                if (s.symbol === "XAUUSD") return v.toFixed(2);
+                return s.symbol.includes("JPY") ? v.toFixed(3) : v.toFixed(5);
+            };
 
             return `${s.symbol}: Price=${fmt(s.price)}
   1H: trend=${s.h1_trend}, change=${s.h1_change_pct}%, high=${fmt(s.h1_high)}, low=${fmt(s.h1_low)}, candles(up=${s.h1_candles_up}/down=${s.h1_candles_down})
@@ -424,6 +531,7 @@ function buildFallback(
     macroContext: string,
     newsContext: string,
     technicals: (TechnicalSnapshot | null)[],
+    goldMarket: GoldMarketContext,
 ): InstrumentAnalysis[] {
     return INSTRUMENTS.map((inst, idx) => {
         const tech = technicals[idx];
@@ -459,13 +567,37 @@ function buildFallback(
             summary = tech
                 ? `${tech.h4_trend === "up" ? "Pushing higher" : tech.h4_trend === "down" ? "Pulling back" : "Consolidating"} on 4H near ${tech.price.toFixed(3)}. Resistance at ${tech.nearest_resistance.toFixed(3)}.`
                 : "Watching US yields and BoJ headlines for direction.";
+        } else if (inst.symbol === "XAUUSD") {
+            const riskOffTone =
+                newsLower.includes("geopolitical") ||
+                newsLower.includes("conflict") ||
+                newsLower.includes("safe haven");
+
+            const dxyStrong = (goldMarket.dxy?.changePct ?? 0) > 0.2;
+            const realYieldPressureUp = goldMarket.realYieldSignal === "up";
+            const etfInflow = goldMarket.etfFlowSignal === "inflow";
+
+            bias =
+                riskOffTone || etfInflow || (!dxyStrong && !realYieldPressureUp && tech?.momentum !== "bearish")
+                    ? "Bullish"
+                    : "Bearish";
+            confidence = tech ? (Math.abs(tech.h4_change_pct) > 0.25 ? 64 : 54) : 54;
+            if (dxyStrong && realYieldPressureUp && bias === "Bearish") confidence += 6;
+            if (etfInflow && bias === "Bullish") confidence += 4;
+            confidence = Math.min(72, confidence);
+            summary = tech
+                ? `Gold ${tech.h4_trend === "up" ? "holding bid" : tech.h4_trend === "down" ? "under pressure" : "range-bound"} on 4H near ${tech.price.toFixed(2)}; DXY/real-yield proxy ${realYieldPressureUp ? "headwind" : "supportive"}.`
+                : `Gold tracking DXY ${goldMarket.dxy ? goldMarket.dxy.changePct.toFixed(2) + "%" : "n/a"}, real-yield proxy ${goldMarket.realYieldSignal}, and ETF-flow proxy ${goldMarket.etfFlowSignal}.`;
         }
 
         const newsDriver = "AI analysis unavailable — using rule-based signals from headline sentiment.";
         const technicalLevels = tech
-            ? `Price at ${inst.symbol.includes("JPY") ? tech.price.toFixed(3) : tech.price.toFixed(5)}. 4H trend: ${tech.h4_trend}. Support: ${inst.symbol.includes("JPY") ? tech.nearest_support.toFixed(3) : tech.nearest_support.toFixed(5)}, Resistance: ${inst.symbol.includes("JPY") ? tech.nearest_resistance.toFixed(3) : tech.nearest_resistance.toFixed(5)}.`
+            ? `Price at ${inst.symbol === "XAUUSD" ? tech.price.toFixed(2) : inst.symbol.includes("JPY") ? tech.price.toFixed(3) : tech.price.toFixed(5)}. 4H trend: ${tech.h4_trend}. Support: ${inst.symbol === "XAUUSD" ? tech.nearest_support.toFixed(2) : inst.symbol.includes("JPY") ? tech.nearest_support.toFixed(3) : tech.nearest_support.toFixed(5)}, Resistance: ${inst.symbol === "XAUUSD" ? tech.nearest_resistance.toFixed(2) : inst.symbol.includes("JPY") ? tech.nearest_resistance.toFixed(3) : tech.nearest_resistance.toFixed(5)}.`
             : "Technical data unavailable.";
-        const macroBackdrop = "Macro data available but AI model was unreachable for detailed analysis.";
+        const macroBackdrop =
+            inst.symbol === "XAUUSD"
+                ? `Gold drivers (Yahoo): ${goldMarket.text}`
+                : "Macro data available but AI model was unreachable for detailed analysis.";
 
         return {
             symbol: inst.symbol,
@@ -510,11 +642,12 @@ export async function GET(req: Request) {
     const baseUrl = `${protocol}://${host}`;
 
     // ── Gather ALL three pillars in parallel ──
-    const [newsContext, calendarContext, macroContext, ...techSnapshots] =
+    const [newsContext, calendarContext, macroContext, goldMarket, ...techSnapshots] =
         await Promise.all([
             fetchNewsContext(baseUrl),
             fetchCalendarContext(baseUrl),
             fetchMacroContext(baseUrl),
+            fetchGoldMarketContext(),
             ...INSTRUMENTS.map((i) => fetchTechnicalData(i.yahoo, i.symbol)),
         ]);
 
@@ -567,6 +700,11 @@ PILLAR 3: MACRO BACKDROP
 ${macroContext}
 
 ═══════════════════════════════════
+GOLD-SPECIFIC MARKET INPUTS (Yahoo)
+═══════════════════════════════════
+${goldMarket.text}
+
+═══════════════════════════════════
 ECONOMIC CALENDAR
 ═══════════════════════════════════
 ${calendarContext}
@@ -580,10 +718,12 @@ For each pair, provide:
 - summary: 1 concise sentence referencing BOTH a news driver AND a technical level. Max 25 words.
 - newsDriver: 1–2 sentences on the key news headlines driving this pair right now. Be specific — cite actual headlines.
 - technicalLevels: 1–2 sentences on 1H/4H structure — trend, momentum, key support/resistance with prices. Use the data above.
-- macroBackdrop: 1 sentence on rates/CPI/GDP framing. Keep it short.
+- macroBackdrop: 1 sentence on rates/CPI/GDP framing. For XAUUSD, explicitly include DXY + US real-yield proxy + GLD ETF-flow proxy.
 
 Respond with ONLY this JSON:
-{"instruments":[{"symbol":"EURUSD","displayName":"Euro / Dollar","bias":"...","confidence":65,"summary":"...","newsDriver":"...","technicalLevels":"...","macroBackdrop":"..."},{"symbol":"GBPUSD","displayName":"Cable","bias":"...","confidence":60,"summary":"...","newsDriver":"...","technicalLevels":"...","macroBackdrop":"..."},{"symbol":"USDJPY","displayName":"Dollar / Yen","bias":"...","confidence":70,"summary":"...","newsDriver":"...","technicalLevels":"...","macroBackdrop":"..."}]}`;
+{"instruments":[{"symbol":"<one of requested symbols>","displayName":"<matching display name>","bias":"Bullish|Bearish","confidence":65,"summary":"...","newsDriver":"...","technicalLevels":"...","macroBackdrop":"..."}]}
+
+IMPORTANT: return exactly ${INSTRUMENTS.length} instruments, one for each requested symbol: ${INSTRUMENTS.map((i) => i.symbol).join(", ")}.`;
 
     // Try models in order
     let instruments: InstrumentAnalysis[] | null = null;
@@ -616,6 +756,7 @@ Respond with ONLY this JSON:
             macroContext,
             newsContext,
             techSnapshots as (TechnicalSnapshot | null)[],
+            goldMarket,
         );
     }
 

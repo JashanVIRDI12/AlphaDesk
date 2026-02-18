@@ -555,7 +555,11 @@ export function FundamentalsPanel({
 
           {overviewError ? (
             <div className="rounded-lg border border-white/[0.04] bg-white/[0.015] px-3 py-2 text-[10px] text-zinc-600">
-              {overviewError}
+              {overviewError.includes("rate_limited") || overviewError.includes("429")
+                ? "AI brief rate limited — retry in a bit"
+                : overviewError.includes("provider_unavailable")
+                  ? "AI brief temporarily unavailable"
+                  : "AI brief unavailable"}
             </div>
           ) : overviewText ? (
             <div className="max-h-[200px] overflow-y-auto rounded-xl border border-white/[0.04] bg-white/[0.015] px-3.5 py-3 text-[10px] leading-[1.7] text-zinc-400 scrollbar-thin scrollbar-thumb-white/10">
