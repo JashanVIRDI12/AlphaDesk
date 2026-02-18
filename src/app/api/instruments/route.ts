@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 /* ------------------------------------------------------------------ */
 /*  /api/instruments – AI-powered FX instrument analysis               */
@@ -21,9 +22,98 @@ type InstrumentsResponse = {
     instruments: InstrumentAnalysis[];
     cached: boolean;
     generatedAt: string;
+    stale?: boolean;
+    error?: string;
 };
 
-/* ── Cache (1-hour TTL — shorter since we include technicals) ── */
+const instrumentAnalysisSchema = z
+    .object({
+        symbol: z.string(),
+        displayName: z.string().optional(),
+        display_name: z.string().optional(),
+        bias: z.string(),
+        confidence: z.union([z.number(), z.string()]).optional(),
+        summary: z.string().optional(),
+        newsDriver: z.string().optional(),
+        news_driver: z.string().optional(),
+        technicalLevels: z.string().optional(),
+        technical_levels: z.string().optional(),
+        macroBackdrop: z.string().optional(),
+        macro_backdrop: z.string().optional(),
+    })
+    .transform((item): InstrumentAnalysis => ({
+        symbol: String(item.symbol),
+        displayName: String(item.displayName ?? item.display_name ?? item.symbol),
+        bias: String(item.bias) === "Bearish" ? "Bearish" : "Bullish",
+        confidence: Math.min(95, Math.max(30, Number(item.confidence) || 50)),
+        summary: String(item.summary ?? ""),
+        newsDriver: String(item.newsDriver ?? item.news_driver ?? ""),
+        technicalLevels: String(item.technicalLevels ?? item.technical_levels ?? ""),
+        macroBackdrop: String(item.macroBackdrop ?? item.macro_backdrop ?? ""),
+    }));
+
+const aiInstrumentsSchema = z
+    .union([
+        z.array(instrumentAnalysisSchema),
+        z.object({ instruments: z.array(instrumentAnalysisSchema) }),
+    ])
+    .transform((v) => (Array.isArray(v) ? v : v.instruments));
+
+const instrumentsResponseSchema = z.object({
+    instruments: z.array(
+        z.object({
+            symbol: z.string(),
+            displayName: z.string(),
+            bias: z.enum(["Bullish", "Bearish"]),
+            confidence: z.number(),
+            summary: z.string(),
+            newsDriver: z.string(),
+            technicalLevels: z.string(),
+            macroBackdrop: z.string(),
+        }),
+    ),
+    cached: z.boolean(),
+    generatedAt: z.string(),
+    stale: z.boolean().optional(),
+    error: z.string().optional(),
+});
+
+type OpenRouterErrorCode = "rate_limited" | "provider_unavailable" | `openrouter_failed_${number}`;
+
+function sanitizeOpenRouterError(status: number): OpenRouterErrorCode {
+    if (status === 429) return "rate_limited";
+    if (status >= 500) return "provider_unavailable";
+    return `openrouter_failed_${status}`;
+}
+
+function parseAIInstruments(raw: string): InstrumentAnalysis[] | null {
+    if (!raw) return null;
+
+    const cleaned = raw
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```\s*$/i, "")
+        .trim();
+
+    const tryParse = (candidate: string): InstrumentAnalysis[] | null => {
+        try {
+            const parsed = JSON.parse(candidate);
+            const validated = aiInstrumentsSchema.safeParse(parsed);
+            if (!validated.success) return null;
+            return validated.data.length > 0 ? validated.data : null;
+        } catch {
+            return null;
+        }
+    };
+
+    const direct = tryParse(cleaned);
+    if (direct) return direct;
+
+    const jsonMatch = cleaned.match(/\[[\s\S]*\]/) ?? cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+    return tryParse(jsonMatch[0]);
+}
+
+/* ── Cache (15-minute TTL for fresher instrument summaries) ── */
 let cache:
     | {
         key: string;
@@ -32,10 +122,10 @@ let cache:
     }
     | undefined;
 
-const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
 const CACHE_HEADERS = {
-    "Cache-Control": "private, max-age=0, s-maxage=300, stale-while-revalidate=1800",
+    "Cache-Control": "private, max-age=0, s-maxage=900, stale-while-revalidate=1800",
 };
 
 /* ── Instruments to analyse ── */
@@ -424,7 +514,7 @@ async function callAI(
     systemPrompt: string,
     userPrompt: string,
     baseUrl: string,
-): Promise<InstrumentAnalysis[] | null> {
+): Promise<{ instruments: InstrumentAnalysis[] | null; errorCode?: OpenRouterErrorCode }> {
     try {
         const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
@@ -449,7 +539,7 @@ async function callAI(
         if (!res.ok) {
             const errText = await res.text();
             console.error(`[instruments] ${model} error:`, res.status, errText.slice(0, 300));
-            return null;
+            return { instruments: null, errorCode: sanitizeOpenRouterError(res.status) };
         }
 
         const json = (await res.json()) as {
@@ -459,70 +549,10 @@ async function callAI(
         const raw = json.choices?.[0]?.message?.content?.trim() ?? "";
         console.log(`[instruments] ${model} raw (${raw.length} chars):`, raw.slice(0, 200));
 
-        if (!raw) return null;
-
-        // Strip code fences
-        const cleaned = raw
-            .replace(/^```(?:json)?\s*/i, "")
-            .replace(/\s*```\s*$/i, "")
-            .trim();
-
-        // Parse — expect { instruments: [...] } or just [...]
-        try {
-            const parsed = JSON.parse(cleaned);
-            const arr = Array.isArray(parsed) ? parsed : parsed.instruments;
-            if (Array.isArray(arr) && arr.length > 0 && arr[0].symbol && arr[0].bias) {
-                return arr.map((item: Record<string, unknown>) => ({
-                    symbol: String(item.symbol),
-                    displayName: String(item.displayName ?? item.display_name ?? item.symbol),
-                    bias: String(item.bias) === "Bearish" ? "Bearish" : "Bullish",
-                    confidence: Math.min(95, Math.max(30, Number(item.confidence) || 50)),
-                    summary: String(item.summary ?? ""),
-                    newsDriver: String(item.newsDriver ?? item.news_driver ?? ""),
-                    technicalLevels: String(item.technicalLevels ?? item.technical_levels ?? ""),
-                    macroBackdrop: String(item.macroBackdrop ?? item.macro_backdrop ?? ""),
-                })) as InstrumentAnalysis[];
-            }
-        } catch {
-            // Try extracting JSON
-            const jsonMatch = cleaned.match(/\[[\s\S]*\]/) ?? cleaned.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                try {
-                    let parsed = JSON.parse(jsonMatch[0]);
-                    if (!Array.isArray(parsed) && parsed.instruments) {
-                        parsed = parsed.instruments;
-                    }
-                    if (Array.isArray(parsed) && parsed.length > 0) {
-                        return parsed.map((item: Record<string, unknown>) => ({
-                            symbol: String(item.symbol),
-                            displayName: String(
-                                item.displayName ?? item.display_name ?? item.symbol,
-                            ),
-                            bias: String(item.bias) === "Bearish" ? "Bearish" : "Bullish",
-                            confidence: Math.min(
-                                95,
-                                Math.max(30, Number(item.confidence) || 50),
-                            ),
-                            summary: String(item.summary ?? ""),
-                            newsDriver: String(item.newsDriver ?? item.news_driver ?? ""),
-                            technicalLevels: String(
-                                item.technicalLevels ?? item.technical_levels ?? "",
-                            ),
-                            macroBackdrop: String(
-                                item.macroBackdrop ?? item.macro_backdrop ?? "",
-                            ),
-                        })) as InstrumentAnalysis[];
-                    }
-                } catch {
-                    // ignore
-                }
-            }
-        }
-
-        return null;
+        return { instruments: parseAIInstruments(raw) };
     } catch (err) {
         console.error(`[instruments] Failed to parse AI response (${model}):`, err);
-        return null;
+        return { instruments: null };
     }
 }
 
@@ -628,9 +658,10 @@ export async function GET(req: Request) {
 
     const aiConfigured = Boolean(apiKey);
 
-    // Cache key: date + 1-hour block
+    // Cache key: date + 15-minute block
     const now = new Date();
-    const cacheKey = `${now.toISOString().slice(0, 10)}-h${now.getHours()}`;
+    const quarterBlock = Math.floor(now.getMinutes() / 15);
+    const cacheKey = `${now.toISOString().slice(0, 10)}-h${now.getHours()}-q${quarterBlock}`;
 
     if (cache && cache.key === cacheKey && Date.now() - cache.fetchedAt < CACHE_TTL) {
         return NextResponse.json(cache.data, { headers: CACHE_HEADERS });
@@ -727,18 +758,21 @@ IMPORTANT: return exactly ${INSTRUMENTS.length} instruments, one for each reques
 
     // Try models in order
     let instruments: InstrumentAnalysis[] | null = null;
+    let lastAiErrorCode: OpenRouterErrorCode | undefined;
 
     if (aiConfigured) {
         for (const fallbackModel of FALLBACK_MODELS) {
             const modelToUse = fallbackModel ?? (primaryModel as string);
             console.log(`[instruments] Trying model: ${modelToUse}`);
-            instruments = await callAI(
+            const aiResult = await callAI(
                 apiKey as string,
                 modelToUse,
                 systemPrompt,
                 userPrompt,
                 baseUrl,
             );
+            instruments = aiResult.instruments;
+            if (aiResult.errorCode) lastAiErrorCode = aiResult.errorCode;
             if (instruments && instruments.length > 0) {
                 console.log(`[instruments] Success with model: ${modelToUse}`);
                 break;
@@ -751,6 +785,16 @@ IMPORTANT: return exactly ${INSTRUMENTS.length} instruments, one for each reques
 
     // Fallback if all AI models fail
     if (!instruments || instruments.length === 0) {
+        if (
+            (lastAiErrorCode === "rate_limited" || lastAiErrorCode === "provider_unavailable") &&
+            cache?.data
+        ) {
+            return NextResponse.json(
+                { ...cache.data, cached: true, stale: true, error: lastAiErrorCode },
+                { headers: CACHE_HEADERS },
+            );
+        }
+
         console.log("[instruments] All AI models failed, using rule-based fallback");
         instruments = buildFallback(
             macroContext,
@@ -760,11 +804,13 @@ IMPORTANT: return exactly ${INSTRUMENTS.length} instruments, one for each reques
         );
     }
 
-    const responseData: InstrumentsResponse = {
+    const responseData: InstrumentsResponse = instrumentsResponseSchema.parse({
         instruments,
         cached: false,
+        stale: false,
+        error: lastAiErrorCode,
         generatedAt: now.toISOString(),
-    };
+    });
 
     // Store in cache
     cache = {

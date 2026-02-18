@@ -11,23 +11,23 @@ type SessionSpec = {
   activeEnd: string;
 };
 
-const STATUS_TIME_ZONE = "Etc/GMT+5";
+const STATUS_TIME_ZONE = "Asia/Kolkata";
 
 const SESSION_SPECS: Record<MarketSession["name"], SessionSpec> = {
   Asia: {
     displayTimeZone: "Asia/Tokyo",
-    activeStart: "18:00",
-    activeEnd: "03:00",
+    activeStart: "05:30",
+    activeEnd: "13:30",
   },
   London: {
     displayTimeZone: "Europe/London",
-    activeStart: "03:00",
-    activeEnd: "08:00",
+    activeStart: "13:30",
+    activeEnd: "21:30",
   },
   "New York": {
     displayTimeZone: "America/New_York",
-    activeStart: "08:00",
-    activeEnd: "16:00",
+    activeStart: "18:30",
+    activeEnd: "02:30",
   },
 };
 

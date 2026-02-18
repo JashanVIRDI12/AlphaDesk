@@ -2,6 +2,11 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { authenticateUser } from "@/lib/users";
 
+const CANONICAL_BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? process.env.NEXTAUTH_URL || "https://gettradingbias.com"
+    : process.env.NEXTAUTH_URL || "http://localhost:3000";
+
 const handler = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
@@ -50,6 +55,21 @@ const handler = NextAuth({
     strategy: "jwt",
   },
   callbacks: {
+    async redirect({ url }) {
+      // Avoid misconfigured NEXTAUTH_URL (e.g. localhost) in production deployments.
+      // Always redirect users back to the canonical host.
+      try {
+        const target = new URL(url, CANONICAL_BASE_URL);
+        const canonical = new URL(CANONICAL_BASE_URL);
+
+        if (target.origin === canonical.origin) return target.toString();
+
+        // If NextAuth passes a full external URL, ignore it and force dashboard.
+        return new URL("/dashboard", CANONICAL_BASE_URL).toString();
+      } catch {
+        return new URL("/dashboard", CANONICAL_BASE_URL).toString();
+      }
+    },
     async jwt({ token, user }) {
       if (user) {
         token.sub = user.id;

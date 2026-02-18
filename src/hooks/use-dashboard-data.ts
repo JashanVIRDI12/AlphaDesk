@@ -145,8 +145,8 @@ export function useNews() {
       if (!res.ok) throw new Error("Failed to fetch news");
       return res.json();
     },
-    staleTime: 10 * 60 * 1000,
-    refetchInterval: 10 * 60 * 1000,
+    staleTime: 1 * 60 * 1000,
+    refetchInterval: 1 * 60 * 1000,
   });
 }
 
@@ -211,8 +211,8 @@ export function useInstruments() {
       if (!res.ok) throw new Error("Failed to fetch instruments");
       return res.json();
     },
-    staleTime: 60 * 60 * 1000,
-    refetchInterval: 60 * 60 * 1000,
+    staleTime: 15 * 60 * 1000,
+    refetchInterval: 15 * 60 * 1000,
   });
 }
 

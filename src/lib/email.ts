@@ -39,6 +39,12 @@ function buildCredentialEmail(params: CredentialEmailParams): {
 } {
   const subject = `Your GetTradingBias Terminal Credentials`;
 
+  const baseUrl =
+    process.env.NODE_ENV === "production"
+      ? process.env.NEXTAUTH_URL || "https://gettradingbias.com"
+      : process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const signInUrl = `${baseUrl.replace(/\/$/, "")}/dashboard`;
+
   const html = `
 <!DOCTYPE html>
 <html>
@@ -83,7 +89,7 @@ function buildCredentialEmail(params: CredentialEmailParams): {
       </div>
 
       <!-- CTA Button -->
-      <a href="${process.env.NEXTAUTH_URL || "http://localhost:3000"}" 
+      <a href="${signInUrl}" 
          style="display:block; text-align:center; padding:14px 24px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fafafa; text-decoration:none; font-size:14px; font-weight:500;">
         Sign in to Terminal →
       </a>
@@ -122,7 +128,7 @@ Your institutional trading terminal access has been provisioned.
 Terminal ID: ${params.terminalId}
 Access Code: ${params.accessCode}
 
-Sign in at: ${process.env.NEXTAUTH_URL || "http://localhost:3000"}
+Sign in at: ${signInUrl}
 
 Security Notice: Keep your credentials secure. Do not share your access code with anyone.
 
@@ -158,7 +164,7 @@ export async function sendCredentialEmail(
   }
 
   const { subject, html, text } = buildCredentialEmail(params);
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const from = process.env.SMTP_FROM || (process.env.SMTP_USER ? `GetTradingBias <${process.env.SMTP_USER}>` : undefined);
 
   try {
     await transporter.sendMail({

@@ -23,15 +23,11 @@ export default function Dashboard() {
                 <main className="mx-auto w-full max-w-[1400px] px-4 py-5 sm:py-6 md:px-6 md:py-8">
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
                         <section className="space-y-7 lg:col-span-8">
-                            <div className="space-y-4">
-                                <Greeting
-                                    title={data.greeting.title}
-                                    subtitle={data.greeting.subtitle}
-                                    sessions={data.sessions}
-                                />
-                                <NoTradeDayBanner />
-                                <MarketSessions sessions={data.sessions} />
-                            </div>
+                            <Greeting
+                                title={data.greeting.title}
+                                subtitle={data.greeting.subtitle}
+                                sessions={data.sessions}
+                            />
 
                             <MacroPanel />
 
@@ -45,6 +41,11 @@ export default function Dashboard() {
                         </section>
 
                         <aside className="space-y-6 lg:col-span-4 lg:sticky lg:top-[76px] lg:self-start">
+                            <div className="space-y-3">
+                                <NoTradeDayBanner />
+                                <MarketSessions sessions={data.sessions} />
+                            </div>
+
                             <NewsHeadlines />
 
                             <div className="space-y-3">

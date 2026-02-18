@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Landmark, Calendar, Brain, AlertTriangle } from "lucide-react";
+import { Landmark, Calendar, Brain, AlertTriangle, Check } from "lucide-react";
 
 import type { HighImpactEvent } from "@/data/market";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +85,66 @@ function parseOverview(text: string): { header: string | null; sections: Overvie
 
 function formatBullet(line: string) {
   return line.replace(/^[-•]\s*/, "");
+}
+
+function parseTimeToMinutes(value: string): number | null {
+  const v = value.trim().toLowerCase();
+  const m = v.match(/^(\d{1,2}):(\d{2})(am|pm)$/);
+  if (!m) return null;
+
+  let hh = Number(m[1]);
+  const mm = Number(m[2]);
+  const ap = m[3];
+
+  if (ap === "am") {
+    if (hh === 12) hh = 0;
+  } else if (hh !== 12) {
+    hh += 12;
+  }
+
+  return hh * 60 + mm;
+}
+
+function parseDateKeyToValue(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const m = value.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (!m) return null;
+
+  const month = Number(m[1]);
+  const day = Number(m[2]);
+  const year = Number(m[3]);
+
+  return Date.UTC(year, month - 1, day);
+}
+
+function getCurrentDayAndMinutesForTz(timeZone: string): { dayKey: string; minutes: number } {
+  const now = new Date();
+
+  const dateParts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+
+  const month = dateParts.find((p) => p.type === "month")?.value ?? "01";
+  const day = dateParts.find((p) => p.type === "day")?.value ?? "01";
+  const year = dateParts.find((p) => p.type === "year")?.value ?? "1970";
+
+  const timeParts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+
+  const hour = Number(timeParts.find((p) => p.type === "hour")?.value ?? "0");
+  const minute = Number(timeParts.find((p) => p.type === "minute")?.value ?? "0");
+
+  return {
+    dayKey: `${month}-${day}-${year}`,
+    minutes: hour * 60 + minute,
+  };
 }
 
 const SECTION_ICONS: Record<string, string> = {
@@ -180,7 +240,12 @@ export function FundamentalsPanel({
 
   const [todayKey, setTodayKey] = React.useState<string | null>(null);
   const [calendarGeneratedAt, setCalendarGeneratedAt] = React.useState<string | null>(null);
-  const [, forceFreshnessTick] = React.useState(0);
+  const [freshnessTick, forceFreshnessTick] = React.useState(0);
+
+  const nowMarker = React.useMemo(
+    () => getCurrentDayAndMinutesForTz(selectedTz),
+    [selectedTz, freshnessTick],
+  );
 
   const calendarUpdatedLabel = React.useMemo(() => {
     if (!calendarGeneratedAt) return null;
@@ -191,7 +256,7 @@ export function FundamentalsPanel({
     if (mins < 60) return `Last updated ${mins}m ago`;
     const hrs = Math.floor(mins / 60);
     return `Last updated ${hrs}h ago`;
-  }, [calendarGeneratedAt]);
+  }, [calendarGeneratedAt, freshnessTick]);
 
   const [overviewLoading, setOverviewLoading] = React.useState(false);
   const [overviewError, setOverviewError] = React.useState<string | null>(null);
@@ -519,20 +584,51 @@ export function FundamentalsPanel({
           {filteredEvents.length > 0 ? (
             <div className="space-y-1">
               {filteredEvents.map((e) => (
-                <div
-                  key={`${e.time}-${e.title}`}
-                  className="group flex items-center gap-2.5 rounded-lg border border-white/[0.03] bg-white/[0.01] px-3 py-2 transition-all duration-300 hover:border-white/[0.06] hover:bg-white/[0.025]"
-                >
-                  <span className="w-[50px] shrink-0 text-[10px] font-mono font-semibold tabular-nums text-zinc-400">
-                    {e.time}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-zinc-300">
-                    {e.title}
-                  </span>
-                  <span className="shrink-0 text-[9px] font-mono tabular-nums text-zinc-600">
-                    {e.consensus} / {e.previous}
-                  </span>
-                </div>
+                (() => {
+                  const eventDateValue = parseDateKeyToValue(e.date ?? todayKey);
+                  const nowDateValue = parseDateKeyToValue(nowMarker.dayKey);
+                  const eventMinutes = parseTimeToMinutes(e.time);
+
+                  const isCompleted =
+                    eventDateValue !== null && nowDateValue !== null
+                      ? eventDateValue < nowDateValue ||
+                        (eventDateValue === nowDateValue &&
+                          eventMinutes !== null &&
+                          eventMinutes <= nowMarker.minutes)
+                      : false;
+
+                  return (
+                    <div
+                      key={`${e.time}-${e.title}`}
+                      className={cn(
+                        "group flex items-center gap-2.5 rounded-lg border border-white/[0.03] bg-white/[0.01] px-3 py-2",
+                        isCompleted && "border-emerald-500/20 bg-emerald-500/[0.04]",
+                      )}
+                    >
+                      <span className="w-[50px] shrink-0 text-[10px] font-mono font-semibold tabular-nums text-zinc-400">
+                        {e.time}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-zinc-300">
+                        {e.title}
+                      </span>
+                      <span className="shrink-0 text-[9px] font-mono tabular-nums text-zinc-600">
+                        {e.consensus} / {e.previous}
+                      </span>
+                      <span
+                        className={cn(
+                          "shrink-0 rounded-full border p-0.5",
+                          isCompleted
+                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                            : "border-white/[0.05] bg-white/[0.01] text-zinc-700",
+                        )}
+                        aria-label={isCompleted ? "event completed" : "event pending"}
+                        title={isCompleted ? "News released" : "Upcoming news"}
+                      >
+                        <Check className="h-2.5 w-2.5" />
+                      </span>
+                    </div>
+                  );
+                })()
               ))}
             </div>
           ) : null}

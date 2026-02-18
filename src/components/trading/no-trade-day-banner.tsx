@@ -22,6 +22,8 @@ type TradeSignal = {
     reason: string;
 };
 
+const BANNER_TIME_ZONE = "Asia/Kolkata";
+
 function parseTimeToMinutes(value: string): number {
     const v = value.trim().toLowerCase();
     const m = v.match(/^(\d{1,2}):(\d{2})(am|pm)$/);
@@ -42,11 +44,22 @@ function eventMinuteInDay(e: CalendarEvent) {
     return parseTimeToMinutes(t);
 }
 
-function isBig4(event: CalendarEvent) {
-    const c = event.currency;
-    if (c && ["USD", "EUR", "GBP", "JPY"].includes(c)) return true;
-    const t = event.title ?? "";
-    return /\b(USD|EUR|GBP|JPY)\b/.test(t);
+function getNowMinutesInTimeZone(timeZone: string): number {
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+    }).formatToParts(new Date());
+
+    const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+    const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+    return hour * 60 + minute;
+}
+
+function isBig3(event: CalendarEvent) {
+    const t = (event.title ?? "").toUpperCase();
+    return /(\bNFP\b|NON[-\s]?FARM|FOMC|\bCPI\b|CONSUMER PRICE INDEX)/.test(t);
 }
 
 function computeSignal(params: {
@@ -55,14 +68,14 @@ function computeSignal(params: {
     holidays: BankHoliday[];
     nowMinutes: number;
 }): TradeSignal | null {
-    const todayBig4 = params.eventsToday.filter(
-        (e) => e.impact === "High" && isBig4(e),
+    const todayBig3 = params.eventsToday.filter(
+        (e) => e.impact === "High" && isBig3(e),
     );
-    const tomorrowBig4 = params.eventsTomorrow.filter(
-        (e) => e.impact === "High" && isBig4(e),
+    const tomorrowBig3 = params.eventsTomorrow.filter(
+        (e) => e.impact === "High" && isBig3(e),
     );
 
-    const releasesToday = todayBig4
+    const releasesToday = todayBig3
         .map(eventMinuteInDay)
         .filter((m) => Number.isFinite(m) && m !== Number.POSITIVE_INFINITY)
         .sort((a, b) => a - b);
@@ -70,26 +83,33 @@ function computeSignal(params: {
     // If bank holiday, treat as caution (thin liquidity) unless already no-trade.
     const hasHoliday = params.holidays.length > 0;
 
-    // Big rule: if there is at least one big release today and it's not fully passed,
-    // it's a no-trade window (trade after release).
+    // Big rule: no-trade while any Big-3 release is still pending.
     if (releasesToday.length > 0) {
-        const lastRelease = releasesToday[releasesToday.length - 1];
-        const bufferAfter = 30; // minutes after last release
-        if (params.nowMinutes <= lastRelease + bufferAfter) {
+        const hasPendingRelease = releasesToday.some((releaseMinute) =>
+            params.nowMinutes <= releaseMinute,
+        );
+
+        if (hasPendingRelease) {
             return {
                 tone: "no_trade",
                 title: "NO TRADE (WAIT)",
-                reason: "High-impact Big-4 news today — trade after the release.",
+                reason: "High-impact Big-3 news today — trade after the release.",
             };
         }
+
+        return {
+            tone: "trade",
+            title: "TRADE DAY",
+            reason: "All Big-3 high-impact releases for today are done — trade your plan.",
+        };
     }
 
     // If big events tomorrow, show caution for positioning.
-    if (tomorrowBig4.length > 0) {
+    if (tomorrowBig3.length > 0) {
         return {
             tone: "caution",
             title: "CAUTION",
-            reason: "Big-4 high-impact events scheduled tomorrow — avoid heavy positions overnight.",
+            reason: "Big-3 high-impact events scheduled tomorrow — avoid heavy positions overnight.",
         };
     }
 
@@ -114,16 +134,15 @@ function computeSignal(params: {
     return {
         tone: "trade",
         title: "TRADE DAY",
-        reason: "No Big-4 high-impact releases pending — trade your plan.",
+        reason: "No Big-3 high-impact releases pending — trade your plan.",
     };
 }
 
 /**
- * Shows a prominent trade guidance banner based on Big-4 news volatility risk.
+ * Shows a prominent trade guidance banner based on Big-3 news volatility risk.
  */
 export function NoTradeDayBanner() {
     const [signal, setSignal] = React.useState<TradeSignal | null>(null);
-    const [, tick] = React.useState(0);
 
     React.useEffect(() => {
         let cancelled = false;
@@ -143,8 +162,7 @@ export function NoTradeDayBanner() {
                 const eventsTomorrow = (data.tomorrowEvents ?? []) as CalendarEvent[];
                 const holidays = (data.holidays ?? []) as BankHoliday[];
 
-                const now = new Date();
-                const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                const nowMinutes = getNowMinutesInTimeZone(BANNER_TIME_ZONE);
 
                 setSignal(
                     computeSignal({
@@ -161,7 +179,7 @@ export function NoTradeDayBanner() {
         }
 
         check();
-        const id = window.setInterval(() => tick((v) => (v + 1) % 10_000), 60 * 1000);
+        const id = window.setInterval(check, 60 * 1000);
         return () => {
             cancelled = true;
             window.clearInterval(id);

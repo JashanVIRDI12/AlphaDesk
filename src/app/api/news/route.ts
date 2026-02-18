@@ -49,10 +49,10 @@ const FEEDS = [
 /* ── Cache ── */
 let cache: { fetchedAt: number; headlines: Headline[] } | undefined;
 let inflight: Promise<Headline[]> | undefined;
-const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+const CACHE_TTL = 1 * 60 * 1000; // 1 minute
 
 const CACHE_HEADERS = {
-    "Cache-Control": "private, max-age=0, s-maxage=120, stale-while-revalidate=600",
+    "Cache-Control": "private, max-age=0, s-maxage=60, stale-while-revalidate=300",
 };
 
 /* ── Helpers ── */
