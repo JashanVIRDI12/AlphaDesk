@@ -29,6 +29,11 @@ export default function Dashboard() {
                                 sessions={data.sessions}
                             />
 
+                            <div className="space-y-3 lg:hidden">
+                                <NoTradeDayBanner />
+                                <MarketSessions sessions={data.sessions} />
+                            </div>
+
                             <MacroPanel />
 
                             <div className="space-y-3">
@@ -41,7 +46,7 @@ export default function Dashboard() {
                         </section>
 
                         <aside className="space-y-6 lg:col-span-4 lg:sticky lg:top-[76px] lg:self-start">
-                            <div className="space-y-3">
+                            <div className="hidden space-y-3 lg:block">
                                 <NoTradeDayBanner />
                                 <MarketSessions sessions={data.sessions} />
                             </div>

@@ -58,9 +58,28 @@ type InstrumentData = {
   macroBackdrop?: string;
 };
 
+export type VolatilityPoint = {
+  time: number;
+  value: number;
+};
+
+export type InstrumentVolatility = {
+  symbol: string;
+  displayName: string;
+  currentAtrPct: number;
+  points: VolatilityPoint[];
+};
+
+export type VolatilityPayload = {
+  timeframe: "1H";
+  period: 14;
+  instruments: InstrumentVolatility[];
+};
+
 type InstrumentsResponse = {
   instruments: InstrumentData[];
   generatedAt: string;
+  volatility?: VolatilityPayload;
 };
 
 type MacroDeskResponse = {

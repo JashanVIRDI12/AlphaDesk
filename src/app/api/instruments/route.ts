@@ -18,8 +18,27 @@ type InstrumentAnalysis = {
     macroBackdrop: string;
 };
 
+type VolatilityPoint = {
+    time: number;
+    value: number;
+};
+
+type InstrumentVolatility = {
+    symbol: string;
+    displayName: string;
+    currentAtrPct: number;
+    points: VolatilityPoint[];
+};
+
+type VolatilityPayload = {
+    timeframe: "1H";
+    period: 14;
+    instruments: InstrumentVolatility[];
+};
+
 type InstrumentsResponse = {
     instruments: InstrumentAnalysis[];
+    volatility: VolatilityPayload;
     cached: boolean;
     generatedAt: string;
     stale?: boolean;
@@ -72,6 +91,23 @@ const instrumentsResponseSchema = z.object({
             macroBackdrop: z.string(),
         }),
     ),
+    volatility: z.object({
+        timeframe: z.literal("1H"),
+        period: z.literal(14),
+        instruments: z.array(
+            z.object({
+                symbol: z.string(),
+                displayName: z.string(),
+                currentAtrPct: z.number(),
+                points: z.array(
+                    z.object({
+                        time: z.number(),
+                        value: z.number(),
+                    }),
+                ),
+            }),
+        ),
+    }),
     cached: z.boolean(),
     generatedAt: z.string(),
     stale: z.boolean().optional(),
@@ -190,7 +226,63 @@ type TechnicalSnapshot = {
     // Key levels
     nearest_support: number;
     nearest_resistance: number;
+    // Volatility (ATR%)
+    atr_pct_current: number;
+    atr_pct_series: VolatilityPoint[];
 };
+
+function computeAtrPctSeries(
+    candles: Array<{ time: number; high: number; low: number; close: number }>,
+    period = 14,
+): VolatilityPoint[] {
+    if (candles.length <= period) return [];
+
+    const trueRanges: number[] = [];
+    const series: VolatilityPoint[] = [];
+
+    for (let i = 1; i < candles.length; i++) {
+        const prevClose = candles[i - 1].close;
+        const curr = candles[i];
+        const tr = Math.max(
+            curr.high - curr.low,
+            Math.abs(curr.high - prevClose),
+            Math.abs(curr.low - prevClose),
+        );
+        trueRanges.push(tr);
+
+        if (trueRanges.length >= period && curr.close > 0) {
+            const window = trueRanges.slice(-period);
+            const atr = window.reduce((sum, v) => sum + v, 0) / period;
+            const atrPct = (atr / curr.close) * 100;
+            series.push({
+                time: curr.time,
+                value: Math.round(atrPct * 10_000) / 10_000,
+            });
+        }
+    }
+
+    return series;
+}
+
+function buildVolatilityPayload(snapshots: (TechnicalSnapshot | null)[]): VolatilityPayload {
+    const bySymbol = new Map(INSTRUMENTS.map((inst) => [inst.symbol, inst.displayName]));
+
+    const instruments = snapshots
+        .filter((snap): snap is TechnicalSnapshot => snap !== null)
+        .map((snap) => ({
+            symbol: snap.symbol,
+            displayName: bySymbol.get(snap.symbol) ?? snap.symbol,
+            currentAtrPct: snap.atr_pct_current,
+            points: snap.atr_pct_series,
+        }))
+        .sort((a, b) => b.currentAtrPct - a.currentAtrPct);
+
+    return {
+        timeframe: "1H",
+        period: 14,
+        instruments,
+    };
+}
 
 type YahooQuoteSnapshot = {
     symbol: string;
@@ -322,9 +414,32 @@ async function fetchTechnicalData(
 
         if (!timestamps || !quotes || timestamps.length < 10) return null;
 
-        const closes = (quotes.close as (number | null)[]).map((v) => v ?? 0);
-        const highs = (quotes.high as (number | null)[]).map((v) => v ?? 0);
-        const lows = (quotes.low as (number | null)[]).map((v) => v ?? 0);
+        const rawCloses = (quotes.close as (number | null)[]).map((v) => v ?? 0);
+        const rawHighs = (quotes.high as (number | null)[]).map((v) => v ?? 0);
+        const rawLows = (quotes.low as (number | null)[]).map((v) => v ?? 0);
+
+        const candles = timestamps
+            .map((time, idx) => ({
+                time,
+                close: rawCloses[idx] ?? 0,
+                high: rawHighs[idx] ?? 0,
+                low: rawLows[idx] ?? 0,
+            }))
+            .filter(
+                (c) =>
+                    Number.isFinite(c.close) &&
+                    Number.isFinite(c.high) &&
+                    Number.isFinite(c.low) &&
+                    c.close > 0 &&
+                    c.high > 0 &&
+                    c.low > 0,
+            );
+
+        if (candles.length < 20) return null;
+
+        const closes = candles.map((c) => c.close);
+        const highs = candles.map((c) => c.high);
+        const lows = candles.map((c) => c.low);
 
         // Filter out zero values
         const validLen = closes.filter((c) => c > 0).length;
@@ -401,6 +516,10 @@ async function fetchTechnicalData(
                 ? supportLevels[0]
                 : Math.min(...recentLows.filter((l) => l > 0));
 
+        const atrPctSeries = computeAtrPctSeries(candles, 14);
+        const atrPctCurrent =
+            atrPctSeries.length > 0 ? atrPctSeries[atrPctSeries.length - 1].value : 0;
+
         return {
             symbol: fxSymbol,
             price: currentPrice,
@@ -420,6 +539,8 @@ async function fetchTechnicalData(
             momentum,
             nearest_support: nearestSupport,
             nearest_resistance: nearestResistance,
+            atr_pct_current: atrPctCurrent,
+            atr_pct_series: atrPctSeries.slice(-48),
         };
     } catch (err) {
         console.error(`[instruments] Technical data fetch failed for ${fxSymbol}:`, err);
@@ -685,6 +806,7 @@ export async function GET(req: Request) {
     const technicalContext = formatTechnicalContext(
         techSnapshots as (TechnicalSnapshot | null)[],
     );
+    const volatility = buildVolatilityPayload(techSnapshots as (TechnicalSnapshot | null)[]);
 
     const timeStr = now.toLocaleTimeString("en-US", {
         hour: "2-digit",
@@ -806,6 +928,7 @@ IMPORTANT: return exactly ${INSTRUMENTS.length} instruments, one for each reques
 
     const responseData: InstrumentsResponse = instrumentsResponseSchema.parse({
         instruments,
+        volatility,
         cached: false,
         stale: false,
         error: lastAiErrorCode,

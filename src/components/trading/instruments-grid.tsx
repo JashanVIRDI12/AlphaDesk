@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { InstrumentCard, type InstrumentData } from "@/components/trading/instrument-card";
+import { VolatilityLineChart } from "@/components/trading/volatility-line-chart";
 import { useInstruments } from "@/hooks/use-dashboard-data";
 
 export function InstrumentsGrid() {
@@ -53,6 +54,7 @@ export function InstrumentsGrid() {
                     AI-generated · {timeLabel}
                 </div>
             )}
+            <VolatilityLineChart volatility={data.volatility} />
         </div>
     );
 }
