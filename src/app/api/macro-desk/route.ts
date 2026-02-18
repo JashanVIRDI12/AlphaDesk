@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 /* ------------------------------------------------------------------ */
 /*  /api/macro-desk – AI-powered macro desk analysis via OpenRouter    */
@@ -14,6 +15,37 @@ type MacroDeskResponse = {
     cached: boolean;
     generatedAt: string;
 };
+
+const aiMacroSchema = z
+    .object({
+        bias: z.string().optional(),
+        riskSentiment: z.string().optional(),
+        bullets: z.array(z.string()).optional(),
+        keyThemes: z.array(z.string()).optional(),
+        notes: z.string().optional(),
+        brief: z.string().optional(),
+    })
+    .transform((v) => {
+        const bulletSource = v.bullets ?? v.keyThemes ?? [];
+        const bullets = bulletSource
+            .map((b) => b?.trim())
+            .filter((b): b is string => Boolean(b));
+
+        return {
+            bias: (v.bias ?? v.riskSentiment ?? "Neutral").trim(),
+            bullets,
+            notes: (v.notes ?? v.brief ?? "").trim(),
+        };
+    });
+
+const macroDeskResponseSchema = z.object({
+    title: z.string(),
+    bias: z.string(),
+    bullets: z.array(z.string()),
+    notes: z.string(),
+    cached: z.boolean(),
+    generatedAt: z.string(),
+});
 
 /* ── Cache (24-hour TTL, keyed by date) ── */
 let cache:
@@ -185,8 +217,9 @@ async function callAI(
         // Try direct parse
         try {
             const parsed = JSON.parse(cleaned);
-            if (parsed.bias && Array.isArray(parsed.bullets) && parsed.bullets.length > 0) {
-                return parsed;
+            const validated = aiMacroSchema.safeParse(parsed);
+            if (validated.success && validated.data.bullets.length > 0) {
+                return validated.data;
             }
         } catch {
             // Try extracting JSON object
@@ -194,8 +227,9 @@ async function callAI(
             if (jsonMatch) {
                 try {
                     const parsed = JSON.parse(jsonMatch[0]);
-                    if (parsed.bias && Array.isArray(parsed.bullets) && parsed.bullets.length > 0) {
-                        return parsed;
+                    const validated = aiMacroSchema.safeParse(parsed);
+                    if (validated.success && validated.data.bullets.length > 0) {
+                        return validated.data;
                     }
                 } catch {
                     console.error(`[macro-desk] ${model} JSON parse failed:`, jsonMatch[0].slice(0, 300));
@@ -381,7 +415,9 @@ Respond with ONLY this JSON (no markdown, no code fences, no explanation):
         // If all AI models failed, use local fallback
         if (!parsed) {
             console.log("[macro-desk] All AI models failed, using local fallback");
-            const fallback = buildLocalFallback(newsContext, calendarContext, macroContext, sessionNote);
+            const fallback = macroDeskResponseSchema.parse(
+                buildLocalFallback(newsContext, calendarContext, macroContext, sessionNote),
+            );
 
             // Cache for 10 min only (so it retries sooner)
             cache = {
@@ -393,14 +429,14 @@ Respond with ONLY this JSON (no markdown, no code fences, no explanation):
             return fallback;
         }
 
-    const responseData: MacroDeskResponse = {
+    const responseData: MacroDeskResponse = macroDeskResponseSchema.parse({
         title: "AI Macro Desk",
         bias: parsed.bias,
         bullets: parsed.bullets.slice(0, 5),
         notes: parsed.notes || "",
         cached: false,
         generatedAt: now.toISOString(),
-    };
+    });
 
         // Store in cache
         cache = {

@@ -4,6 +4,7 @@ import * as React from "react";
 import { Newspaper, ExternalLink, Radio } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useNews } from "@/hooks/use-dashboard-data";
 
 type Headline = {
     title: string;
@@ -23,53 +24,23 @@ const SOURCE_COLORS: Record<string, string> = {
 };
 
 export function NewsHeadlines() {
-    const [headlines, setHeadlines] = React.useState<Headline[]>([]);
-    const [loading, setLoading] = React.useState(true);
-    const [error, setError] = React.useState<string | null>(null);
-    const [generatedAt, setGeneratedAt] = React.useState<string | null>(null);
+    const { data, isLoading, error } = useNews();
     const [, forceTick] = React.useState(0);
 
     const updatedLabel = React.useMemo(() => {
-        if (!generatedAt) return null;
-        const diff = Date.now() - new Date(generatedAt).getTime();
+        if (!data?.generatedAt) return null;
+        const diff = Date.now() - new Date(data.generatedAt).getTime();
         if (!Number.isFinite(diff)) return null;
         const mins = Math.floor(diff / 60_000);
         if (mins < 1) return "Last updated just now";
         if (mins < 60) return `Last updated ${mins}m ago`;
         const hrs = Math.floor(mins / 60);
         return `Last updated ${hrs}h ago`;
-    }, [generatedAt]);
+    }, [data?.generatedAt, forceTick]);
 
     React.useEffect(() => {
-        let cancelled = false;
-
-        const load = async () => {
-            try {
-                const res = await fetch("/api/news", { cache: "no-store" });
-                if (!res.ok) throw new Error(`${res.status}`);
-                const data = await res.json();
-                if (!cancelled) {
-                    setHeadlines(data.headlines ?? []);
-                    setGeneratedAt(typeof data.generatedAt === "string" ? data.generatedAt : null);
-                    setError(null);
-                }
-            } catch (e) {
-                if (!cancelled) {
-                    setError(e instanceof Error ? e.message : "Failed to load");
-                }
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        };
-
-        load();
-        const id = window.setInterval(load, 5 * 60 * 1000);
         const ticker = window.setInterval(() => forceTick((v) => (v + 1) % 10_000), 60 * 1000);
-        return () => {
-            cancelled = true;
-            window.clearInterval(id);
-            window.clearInterval(ticker);
-        };
+        return () => window.clearInterval(ticker);
     }, []);
 
     return (
@@ -88,7 +59,7 @@ export function NewsHeadlines() {
                         </span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                        {loading ? (
+                        {isLoading ? (
                             <span className="text-[9px] tracking-wide text-zinc-600">
                                 loading…
                             </span>
@@ -105,7 +76,7 @@ export function NewsHeadlines() {
                         )}
                     </div>
                 </div>
-                {!loading && !error && updatedLabel ? (
+                {!isLoading && !error && updatedLabel ? (
                     <div className="mt-1 text-[9px] tracking-wide text-zinc-600">
                         {updatedLabel}
                     </div>
@@ -113,20 +84,20 @@ export function NewsHeadlines() {
             </CardHeader>
 
             <CardContent className="px-4 pb-3.5 pt-0">
-                {error && !loading ? (
+                {error && !isLoading ? (
                     <div className="rounded-lg border border-white/[0.04] bg-white/[0.015] px-3 py-2 text-[10px] text-zinc-600">
                         News unavailable
                     </div>
                 ) : null}
 
-                {!loading && headlines.length === 0 && !error ? (
+                {!isLoading && (!data?.headlines || data.headlines.length === 0) && !error ? (
                     <div className="rounded-lg border border-white/[0.04] bg-white/[0.015] px-3 py-2 text-[10px] text-zinc-600">
                         No headlines available
                     </div>
                 ) : null}
 
                 <div className="space-y-px">
-                    {headlines.slice(0, 6).map((h, i) => (
+                    {data?.headlines.slice(0, 6).map((h: Headline, i: number) => (
                         <a
                             key={`${h.publishedAt}-${i}`}
                             href={h.url}
@@ -173,7 +144,7 @@ export function NewsHeadlines() {
                     ))}
                 </div>
 
-                {loading ? (
+                {isLoading ? (
                     <div className="space-y-1.5 pt-1">
                         {[...Array(4)].map((_, i) => (
                             <div key={i} className="flex flex-col gap-1.5 px-2.5 py-2">

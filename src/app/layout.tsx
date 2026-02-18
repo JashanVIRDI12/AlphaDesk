@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthSessionProvider } from "@/components/auth/session-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryProvider } from "@/providers/query-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,7 +19,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "GetTradingBias",
-  description: "GetTradingBias — AI-powered trading intelligence for FX traders",
+  description: "AI-powered FX trading intelligence platform",
   icons: {
     icon: "/favicon.png",
   },
@@ -35,12 +36,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthSessionProvider>
-          <ThemeProvider>
-            <TooltipProvider delayDuration={250}>
-              {children}
-              <Analytics />
-            </TooltipProvider>
-          </ThemeProvider>
+          <QueryProvider>
+            <ThemeProvider>
+              <TooltipProvider delayDuration={250}>
+                {children}
+                <Analytics />
+              </TooltipProvider>
+            </ThemeProvider>
+          </QueryProvider>
         </AuthSessionProvider>
       </body>
     </html>

@@ -5,6 +5,7 @@ import { Brain, RefreshCw, Activity } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useMacroDesk, useMacroData } from "@/hooks/use-dashboard-data";
 
 type MacroData = {
   title: string;
@@ -139,8 +140,8 @@ function CurrencyMacroCard({
           <div className="flex items-baseline gap-1.5">
             <span
               className={cn(
-                "text-[14px] font-semibold tracking-tight",
-                config.accent,
+                "text-[11px] font-semibold tracking-tight",
+                BIAS_STYLES["Neutral"],
               )}
             >
               {config.label}
@@ -167,16 +168,12 @@ function CurrencyMacroCard({
 }
 
 export function MacroPanel() {
-  const [data, setData] = React.useState<MacroData | null>(null);
-  const [macroIndicators, setMacroIndicators] =
-    React.useState<MacroIndicatorData | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [refreshing, setRefreshing] = React.useState(false);
+  const { data: deskData, isLoading: deskLoading, error: deskError, refetch } = useMacroDesk();
+  const { data: indicatorData, isLoading: indicatorLoading } = useMacroData();
   const [, forceFreshnessTick] = React.useState(0);
 
   const macroSnapshotLabel = React.useMemo(() => {
-    const t = macroIndicators?.fetchedAt;
+    const t = indicatorData?.generatedAt;
     if (!t) return null;
     const diff = Date.now() - new Date(t).getTime();
     if (!Number.isFinite(diff)) return null;
@@ -185,53 +182,19 @@ export function MacroPanel() {
     if (mins < 60) return `Last updated ${mins}m ago`;
     const hrs = Math.floor(mins / 60);
     return `Last updated ${hrs}h ago`;
-  }, [macroIndicators?.fetchedAt]);
-
-  const fetchMacro = React.useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-
-    try {
-      const [macroRes, indicatorRes] = await Promise.all([
-        fetch("/api/macro-desk", { cache: "no-store" }),
-        fetch("/api/macro-data", { cache: "no-store" }),
-      ]);
-
-      if (!macroRes.ok) {
-        const err = await macroRes.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${macroRes.status}`);
-      }
-      const json = await macroRes.json();
-      setData(json);
-
-      if (indicatorRes.ok) {
-        const indicatorJson = await indicatorRes.json();
-        setMacroIndicators(indicatorJson);
-      }
-
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  }, [indicatorData?.generatedAt, forceFreshnessTick]);
 
   React.useEffect(() => {
-    fetchMacro();
-    const id = window.setInterval(() => fetchMacro(true), 30 * 60 * 1000);
     const ticker = window.setInterval(
       () => forceFreshnessTick((v) => (v + 1) % 10_000),
       60 * 1000,
     );
-    return () => {
-      window.clearInterval(id);
-      window.clearInterval(ticker);
-    };
-  }, [fetchMacro]);
+    return () => window.clearInterval(ticker);
+  }, []);
 
-  /* ── Skeleton ── */
+  const loading = deskLoading || indicatorLoading;
+  const error = deskError ? "Failed to load" : null;
+
   if (loading) {
     return (
       <Card className="relative overflow-hidden border-white/[0.06] bg-gradient-to-b from-white/[0.025] to-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_20px_80px_rgba(0,0,0,0.5)]">
@@ -266,8 +229,7 @@ export function MacroPanel() {
     );
   }
 
-  /* ── Error state ── */
-  if (error && !data) {
+  if (error && !deskData) {
     return (
       <Card className="relative overflow-hidden border-white/[0.06] bg-gradient-to-b from-white/[0.025] to-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_20px_80px_rgba(0,0,0,0.5)]">
         <CardHeader className="pb-3">
@@ -281,7 +243,7 @@ export function MacroPanel() {
               </div>
             </div>
             <button
-              onClick={() => fetchMacro()}
+              onClick={() => refetch()}
               className="rounded-full p-1.5 text-zinc-600 transition-colors hover:bg-white/[0.04] hover:text-zinc-400"
             >
               <RefreshCw className="h-3.5 w-3.5" />
@@ -297,15 +259,22 @@ export function MacroPanel() {
     );
   }
 
-  if (!data) return null;
+  if (!deskData) return null;
 
+  const riskSentiment = (deskData.riskSentiment || deskData.bias || "Neutral").trim();
+  const analysisThemes = Array.isArray(deskData.keyThemes)
+    ? deskData.keyThemes
+    : Array.isArray(deskData.bullets)
+      ? deskData.bullets
+      : [];
+  const takeaway = deskData.brief || deskData.notes || "";
   const biasStyle =
-    BIAS_STYLES[data.bias] ??
+    BIAS_STYLES[riskSentiment] ??
     "border-zinc-400/20 bg-zinc-400/[0.08] text-zinc-300";
 
-  const timeAgo = data.generatedAt
+  const timeAgo = deskData.generatedAt
     ? (() => {
-      const diff = Date.now() - new Date(data.generatedAt).getTime();
+      const diff = Date.now() - new Date(deskData.generatedAt).getTime();
       const mins = Math.floor(diff / 60000);
       if (mins < 1) return "just now";
       if (mins < 60) return `${mins}m ago`;
@@ -335,9 +304,9 @@ export function MacroPanel() {
               <div className="text-[10px] font-medium uppercase tracking-[0.15em] text-zinc-600">
                 Desk
               </div>
-              <div className="text-[15px] font-semibold tracking-tight text-zinc-200">
-                {data.title}
-              </div>
+              <h3 className="text-[15px] font-semibold leading-tight tracking-tight text-zinc-200">
+                Macro Desk Brief
+              </h3>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -348,18 +317,18 @@ export function MacroPanel() {
                 biasStyle,
               )}
             >
-              {data.bias.toUpperCase()}
+              {riskSentiment.toUpperCase()}
             </Badge>
             <button
-              onClick={() => fetchMacro(true)}
-              disabled={refreshing}
+              onClick={() => refetch()}
+              disabled={false}
               className="rounded-full p-1.5 text-zinc-600 transition-colors hover:bg-white/[0.04] hover:text-zinc-400 disabled:opacity-30"
               title="Refresh analysis"
             >
               <RefreshCw
                 className={cn(
                   "h-3.5 w-3.5",
-                  refreshing && "animate-spin",
+                  false ? "animate-spin" : "",
                 )}
               />
             </button>
@@ -369,7 +338,7 @@ export function MacroPanel() {
 
       <CardContent className="space-y-5">
         {/* ── Macro Indicators Grid ── */}
-        {macroIndicators && (
+        {indicatorData?.data && (
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <Activity className="h-3 w-3 text-zinc-600" />
@@ -384,20 +353,31 @@ export function MacroPanel() {
               ) : null}
             </div>
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-              {(["USD", "EUR", "GBP", "JPY"] as const).map((currency) => (
-                <CurrencyMacroCard
-                  key={currency}
-                  currency={currency}
-                  data={macroIndicators[currency]}
-                />
-              ))}
+              {["USD", "EUR", "GBP", "JPY"].map((currency) => {
+                const indicators = indicatorData.data.filter((ind: any) => ind.country === currency);
+                if (indicators.length === 0) return null;
+                const macroData = {
+                  rate: indicators.find((ind: any) => ind.indicator === "Interest Rate")?.value || "N/A",
+                  cpi: indicators.find((ind: any) => ind.indicator === "CPI")?.value || "N/A",
+                  gdp: indicators.find((ind: any) => ind.indicator === "GDP Growth")?.value || "N/A",
+                  unemployment: indicators.find((ind: any) => ind.indicator === "Unemployment")?.value || "N/A",
+                  lastUpdated: indicators[0]?.date || ""
+                };
+                return (
+                  <CurrencyMacroCard
+                    key={currency}
+                    currency={currency}
+                    data={macroData}
+                  />
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* ── AI Analysis Section ── */}
         <div className="space-y-3">
-          {macroIndicators && (
+          {indicatorData && (
             <div className="flex items-center gap-3">
               <Brain className="h-3 w-3 text-zinc-600" />
               <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
@@ -408,22 +388,22 @@ export function MacroPanel() {
           )}
 
           <ul className="space-y-3 text-[13px] leading-[1.6] text-zinc-400">
-            {data.bullets.map((b, i) => (
+            {analysisThemes.map((bullet: string, i: number) => (
               <li key={i} className="flex gap-2.5">
                 <span className="mt-[9px] h-[3px] w-[3px] shrink-0 rounded-full bg-zinc-600" />
-                <span>{b}</span>
+                <span>{bullet}</span>
               </li>
             ))}
           </ul>
         </div>
 
         {/* ── Tactical Note ── */}
-        {data.notes && (
+        {takeaway && (
           <div className="rounded-lg border border-white/[0.04] bg-white/[0.015] px-3.5 py-2.5 text-[12px] leading-[1.6] text-zinc-400">
             <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
               Takeaway
             </span>
-            <span className="text-zinc-300">{data.notes}</span>
+            <span className="text-zinc-300">{takeaway}</span>
           </div>
         )}
 
@@ -435,7 +415,7 @@ export function MacroPanel() {
           </div>
           {timeAgo && (
             <span className="tracking-wide">
-              {data.cached ? "cached" : "fresh"} · {timeAgo}
+              {timeAgo}
             </span>
           )}
         </div>

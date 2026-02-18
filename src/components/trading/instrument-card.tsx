@@ -4,6 +4,8 @@ import * as React from "react";
 import {
   ExternalLink,
   X,
+  Share2,
+  Download,
   Newspaper,
   BarChart3,
   Landmark,
@@ -20,7 +22,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 export type InstrumentData = {
   symbol: string;
   displayName: string;
-  bias: "Bullish" | "Bearish";
+  bias: "Bullish" | "Bearish" | "Neutral";
   confidence: number;
   summary: string;
   newsDriver?: string;
@@ -105,6 +107,134 @@ function MiniChart({ symbol, tone }: { symbol: string; tone: "up" | "down" }) {
       className="tradingview-widget-container h-[180px] w-full overflow-hidden rounded-lg"
     />
   );
+}
+
+function drawWrappedText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, maxLines = 4) {
+  const words = text.split(/\s+/);
+  let line = "";
+  let lines = 0;
+
+  for (let i = 0; i < words.length; i++) {
+    const testLine = `${line}${line ? " " : ""}${words[i]}`;
+    const width = ctx.measureText(testLine).width;
+
+    if (width > maxWidth && line) {
+      ctx.fillText(line, x, y + lines * lineHeight);
+      lines += 1;
+      line = words[i];
+      if (lines >= maxLines - 1) break;
+    } else {
+      line = testLine;
+    }
+  }
+
+  if (lines < maxLines) {
+    ctx.fillText(line, x, y + lines * lineHeight);
+  }
+}
+
+async function makeBiasCardBlob(instrument: InstrumentData): Promise<Blob> {
+  const width = 1080;
+  const height = 1920;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas unavailable");
+
+  const bullish = instrument.bias === "Bullish";
+
+  const bg = ctx.createLinearGradient(0, 0, width, height);
+  bg.addColorStop(0, "#05070d");
+  bg.addColorStop(1, "#0a0f1a");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, width, height);
+
+  const glow = ctx.createRadialGradient(width * 0.5, 280, 80, width * 0.5, 280, 520);
+  glow.addColorStop(0, bullish ? "rgba(16,185,129,0.25)" : "rgba(244,63,94,0.22)");
+  glow.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = "rgba(255,255,255,0.06)";
+  ctx.fillRect(64, 64, width - 128, height - 128);
+
+  ctx.fillStyle = "#d4d4d8";
+  ctx.font = "600 38px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.fillText("GetTradingBias", 104, 150);
+
+  ctx.fillStyle = bullish ? "#34d399" : "#fb7185";
+  ctx.font = "700 88px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.fillText(instrument.symbol, 104, 280);
+
+  ctx.fillStyle = bullish ? "#6ee7b7" : "#fda4af";
+  ctx.font = "700 52px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.fillText(`${instrument.bias.toUpperCase()} · ${instrument.confidence}%`, 104, 360);
+
+  ctx.fillStyle = "#a1a1aa";
+  ctx.font = "600 30px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.fillText(instrument.displayName, 104, 418);
+
+  let yPos = 520;
+
+  ctx.fillStyle = "#71717a";
+  ctx.font = "600 28px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.fillText("SUMMARY", 104, yPos);
+  yPos += 50;
+
+  ctx.fillStyle = "#e4e4e7";
+  ctx.font = "500 40px system-ui, -apple-system, Segoe UI, sans-serif";
+  drawWrappedText(ctx, instrument.summary, 104, yPos, width - 208, 56, 4);
+  yPos += 56 * 4 + 60;
+
+  if (instrument.newsDriver) {
+    ctx.fillStyle = "#71717a";
+    ctx.font = "600 28px system-ui, -apple-system, Segoe UI, sans-serif";
+    ctx.fillText("NEWS DRIVER", 104, yPos);
+    yPos += 50;
+
+    ctx.fillStyle = "#e4e4e7";
+    ctx.font = "500 36px system-ui, -apple-system, Segoe UI, sans-serif";
+    drawWrappedText(ctx, instrument.newsDriver, 104, yPos, width - 208, 52, 3);
+    yPos += 52 * 3 + 50;
+  }
+
+  if (instrument.technicalLevels) {
+    ctx.fillStyle = "#71717a";
+    ctx.font = "600 28px system-ui, -apple-system, Segoe UI, sans-serif";
+    ctx.fillText("TECHNICAL LEVELS", 104, yPos);
+    yPos += 50;
+
+    ctx.fillStyle = "#e4e4e7";
+    ctx.font = "500 36px system-ui, -apple-system, Segoe UI, sans-serif";
+    drawWrappedText(ctx, instrument.technicalLevels, 104, yPos, width - 208, 52, 3);
+    yPos += 52 * 3 + 50;
+  }
+
+  if (instrument.macroBackdrop) {
+    ctx.fillStyle = "#71717a";
+    ctx.font = "600 28px system-ui, -apple-system, Segoe UI, sans-serif";
+    ctx.fillText("MACRO BACKDROP", 104, yPos);
+    yPos += 50;
+
+    ctx.fillStyle = "#e4e4e7";
+    ctx.font = "500 36px system-ui, -apple-system, Segoe UI, sans-serif";
+    drawWrappedText(ctx, instrument.macroBackdrop, 104, yPos, width - 208, 52, 3);
+  }
+
+  const now = new Date();
+  const stamp = `${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  ctx.fillStyle = "#71717a";
+  ctx.font = "500 28px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.fillText(`AI Snapshot · ${stamp}`, 104, height - 190);
+  ctx.fillText("Share to Instagram Story", 104, height - 140);
+
+  return await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) return reject(new Error("Failed to generate image"));
+      resolve(blob);
+    }, "image/png");
+  });
 }
 
 /* ── Confidence Gauge (radial) ── */
@@ -220,6 +350,46 @@ function InstrumentDetailModal({
 }) {
   const isBullish = instrument.bias === "Bullish";
   const chartLink = TV_CHART_LINKS[instrument.symbol] ?? "#";
+  const [sharing, setSharing] = React.useState(false);
+  const [shareNote, setShareNote] = React.useState<string | null>(null);
+
+  const handleShareBiasCard = React.useCallback(async () => {
+    try {
+      setSharing(true);
+      setShareNote(null);
+      const blob = await makeBiasCardBlob(instrument);
+      const file = new File([blob], `${instrument.symbol.toLowerCase()}-bias-card.png`, {
+        type: "image/png",
+      });
+
+      const canShareFiles =
+        typeof navigator !== "undefined" &&
+        "canShare" in navigator &&
+        (navigator as Navigator & { canShare?: (data?: ShareData) => boolean }).canShare?.({ files: [file] });
+
+      if (canShareFiles && navigator.share) {
+        await navigator.share({
+          files: [file],
+          title: `${instrument.symbol} Bias Card`,
+          text: `${instrument.symbol} ${instrument.bias} (${instrument.confidence}%) · GetTradingBias`,
+        });
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${instrument.symbol.toLowerCase()}-bias-card.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setShareNote("Card downloaded. Upload it in Instagram Story.");
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      setShareNote("Unable to share right now. Please try again.");
+    } finally {
+      setSharing(false);
+    }
+  }, [instrument]);
 
   // Close on escape
   React.useEffect(() => {
@@ -399,19 +569,34 @@ function InstrumentDetailModal({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between border-t border-white/[0.06] px-5 py-3">
-            <span className="text-[10px] text-zinc-600">
-              AI-generated · Click away or press Esc to close
-            </span>
-            <a
-              href={chartLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-zinc-300 transition-all hover:bg-white/[0.06] hover:text-zinc-100"
-            >
-              Open in TradingView
-              <ExternalLink className="h-3 w-3" />
-            </a>
+          <div className="space-y-2 border-t border-white/[0.06] px-5 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] text-zinc-600">
+                AI-generated · Click away or press Esc to close
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleShareBiasCard}
+                  disabled={sharing}
+                  className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-zinc-200 transition-all hover:bg-white/[0.06] disabled:opacity-50"
+                >
+                  {sharing ? <Download className="h-3 w-3 animate-pulse" /> : <Share2 className="h-3 w-3" />}
+                  {sharing ? "Preparing…" : "Share Story"}
+                </button>
+                <a
+                  href={chartLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-zinc-300 transition-all hover:bg-white/[0.06] hover:text-zinc-100"
+                >
+                  Open in TradingView
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+            </div>
+            {shareNote ? (
+              <div className="text-[10px] text-zinc-500">{shareNote}</div>
+            ) : null}
           </div>
         </div>
       </div>

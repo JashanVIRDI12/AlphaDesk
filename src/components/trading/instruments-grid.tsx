@@ -3,40 +3,12 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { InstrumentCard, type InstrumentData } from "@/components/trading/instrument-card";
+import { useInstruments } from "@/hooks/use-dashboard-data";
 
 export function InstrumentsGrid() {
-    const [instruments, setInstruments] = React.useState<InstrumentData[]>([]);
-    const [loading, setLoading] = React.useState(true);
-    const [generatedAt, setGeneratedAt] = React.useState<string | null>(null);
-    const [cached, setCached] = React.useState(false);
+    const { data, isLoading } = useInstruments();
 
-    React.useEffect(() => {
-        let cancelled = false;
-
-        async function fetchInstruments() {
-            try {
-                const res = await fetch("/api/instruments");
-                if (!res.ok) throw new Error("API error");
-                const data = await res.json();
-                if (!cancelled) {
-                    setInstruments(data.instruments ?? []);
-                    setGeneratedAt(data.generatedAt ?? null);
-                    setCached(data.cached ?? false);
-                    setLoading(false);
-                }
-            } catch (err) {
-                console.error("[InstrumentsGrid] Fetch failed:", err);
-                if (!cancelled) setLoading(false);
-            }
-        }
-
-        fetchInstruments();
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    if (loading) {
+    if (isLoading) {
         return (
             <div className="flex items-center justify-center gap-3 py-14">
                 <div className="relative">
@@ -52,7 +24,7 @@ export function InstrumentsGrid() {
         );
     }
 
-    if (instruments.length === 0) {
+    if (!data?.instruments || data.instruments.length === 0) {
         return (
             <div className="py-14 text-center text-sm text-zinc-500">
                 No instrument data available.
@@ -61,17 +33,17 @@ export function InstrumentsGrid() {
     }
 
     // Format the time nicely
-    const timeLabel = generatedAt
-        ? `${cached ? "cached" : "fresh"} · ${new Date(generatedAt).toLocaleTimeString([], {
+    const timeLabel = data.generatedAt
+        ? new Date(data.generatedAt).toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
-        })}`
+        })
         : null;
 
     return (
         <div className="space-y-3">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {instruments.map((inst) => (
+                {data.instruments.map((inst: InstrumentData) => (
                     <InstrumentCard key={inst.symbol} instrument={inst} />
                 ))}
             </div>
