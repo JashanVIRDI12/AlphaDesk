@@ -765,9 +765,8 @@ function buildFallback(
 
 /* ── Models to try ── */
 const FALLBACK_MODELS = [
-    null, // uses env OPENROUTER_MODEL
-    "google/gemini-3-flash-preview",
     "google/gemini-2.0-flash-001",
+    "google/gemini-3-flash-preview",
     "meta-llama/llama-3.3-70b-instruct",
 ];
 
@@ -775,7 +774,7 @@ const FALLBACK_MODELS = [
 export async function GET(req: Request) {
     const apiKey = process.env.OPENROUTER_API_KEY;
     const primaryModel =
-        process.env.OPENROUTER_MODEL || "google/gemini-3-flash-preview";
+        process.env.OPENROUTER_MODEL || "openai/gpt-5-mini";
 
     const aiConfigured = Boolean(apiKey);
 
@@ -883,8 +882,12 @@ IMPORTANT: return exactly ${INSTRUMENTS.length} instruments, one for each reques
     let lastAiErrorCode: OpenRouterErrorCode | undefined;
 
     if (aiConfigured) {
-        for (const fallbackModel of FALLBACK_MODELS) {
-            const modelToUse = fallbackModel ?? (primaryModel as string);
+        const modelsToTry = [
+            primaryModel,
+            ...FALLBACK_MODELS.filter((m) => m !== primaryModel),
+        ];
+
+        for (const modelToUse of modelsToTry) {
             console.log(`[instruments] Trying model: ${modelToUse}`);
             const aiResult = await callAI(
                 apiKey as string,

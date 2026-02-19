@@ -69,9 +69,49 @@ function sanitizeOpenRouterError(status: number, rawText: string) {
   return `openrouter_failed_${status}`;
 }
 
+function buildLocalOverview(body: Body) {
+  const holidays = body.holidays ?? [];
+  const topEvents = body.events.slice(0, 3);
+
+  const overviewLines = [
+    holidays.length > 0
+      ? `- Bank holidays in play (${holidays.map((h) => h.currency).join(", ")}) can thin liquidity and exaggerate spikes around data times.`
+      : "- No major holiday liquidity distortion is flagged today, so regular session flows should dominate.",
+    topEvents.length > 0
+      ? `- Key risk windows: ${topEvents.map((e) => `${e.time} ${e.currency ?? ""} ${e.title}`.trim()).join("; ")}.`
+      : "- No high-impact releases are scheduled, so focus on technical ranges and headline-driven breaks.",
+    body.riskMode === "Risk-off"
+      ? "- Risk tone is defensive; prioritize cleaner confirmation and tighter invalidation before sizing up."
+      : "- Risk tone is constructive; continuation setups may work better than aggressive mean-reversion.",
+  ];
+
+  const scenarios =
+    topEvents.length > 0
+      ? {
+        base: "Data broadly in-line keeps price action two-way inside pre-release ranges.",
+        up: "Softer US inflation/growth surprise can pressure USD and support EURUSD/GBPUSD plus gold.",
+        down: "Hotter US data can lift USD and yields, pressuring EURUSD/GBPUSD while capping gold.",
+      }
+      : {
+        base: "Range-first behavior is likely unless a fresh geopolitical or central-bank headline appears.",
+        up: "A risk-positive headline can trigger a momentum extension through intraday resistance clusters.",
+        down: "Thin-liquidity whipsaws can fake breakouts; failed breaks can reverse quickly back into range.",
+      };
+
+  return [
+    `DATE: ${body.date} | RISK: ${body.riskMode}`,
+    "OVERVIEW:",
+    ...overviewLines.map((line) => line.trim()),
+    "SCENARIOS:",
+    `- Base: ${scenarios.base}`,
+    `- Upside surprise: ${scenarios.up}`,
+    `- Downside surprise: ${scenarios.down}`,
+  ].join("\n");
+}
+
 export async function POST(req: Request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || "google/gemini-3-flash-preview";
+  const model = process.env.OPENROUTER_MODEL || "openai/gpt-5-mini";
   const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
   if (!apiKey) {
@@ -264,6 +304,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ overview }, { headers: CACHE_HEADERS });
   } catch (e) {
     const message = e instanceof Error ? e.message : "openrouter_failed";
+    if (message === "openrouter_failed_401" || message === "openrouter_failed_403") {
+      const overview = buildLocalOverview(body);
+      overviewCache = {
+        key: cacheKey,
+        fetchedAt: Date.now(),
+        overview,
+      };
+      return NextResponse.json(
+        {
+          overview,
+          cached: false,
+          fallback: true,
+          error: "openrouter_auth_failed",
+        },
+        { headers: CACHE_HEADERS },
+      );
+    }
+
     if (message === "rate_limited") {
       if (overviewCache && overviewCache.key === cacheKey) {
         return NextResponse.json(

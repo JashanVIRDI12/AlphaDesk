@@ -296,9 +296,8 @@ function buildLocalFallback(
 
 /* ── Models to try (in order) ── */
 const FALLBACK_MODELS = [
-    null, // uses env OPENROUTER_MODEL
-    "google/gemini-3-flash-preview",
     "google/gemini-2.0-flash-001",
+    "google/gemini-3-flash-preview",
     "meta-llama/llama-3.3-70b-instruct",
 ];
 
@@ -306,7 +305,7 @@ const FALLBACK_MODELS = [
 export async function GET(req: Request) {
     const apiKey = process.env.OPENROUTER_API_KEY;
     const primaryModel =
-        process.env.OPENROUTER_MODEL || "google/gemini-3-flash-preview";
+        process.env.OPENROUTER_MODEL || "openai/gpt-5-mini";
 
     if (!apiKey) {
         return NextResponse.json(
@@ -401,8 +400,12 @@ Respond with ONLY this JSON (no markdown, no code fences, no explanation):
         // Try models in order until one works
         let parsed: { bias: string; bullets: string[]; notes: string } | null = null;
 
-        for (const fallbackModel of FALLBACK_MODELS) {
-            const modelToUse = fallbackModel ?? primaryModel;
+        const modelsToTry = [
+            primaryModel,
+            ...FALLBACK_MODELS.filter((m) => m !== primaryModel),
+        ];
+
+        for (const modelToUse of modelsToTry) {
             console.log(`[macro-desk] Trying model: ${modelToUse}`);
             parsed = await callAI(apiKey, modelToUse, systemPrompt, userPrompt, baseUrl);
             if (parsed) {

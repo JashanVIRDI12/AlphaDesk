@@ -9,6 +9,7 @@ import {
   LineSeries,
   createChart,
 } from "lightweight-charts";
+import { Maximize2, Minimize2 } from "lucide-react";
 
 import type { VolatilityPayload } from "@/hooks/use-dashboard-data";
 import { cn } from "@/lib/utils";
@@ -30,13 +31,21 @@ export function VolatilityLineChart({ volatility, className }: VolatilityLineCha
   const chartElRef = React.useRef<HTMLDivElement | null>(null);
   const chartRef = React.useRef<IChartApi | null>(null);
   const seriesRef = React.useRef<Array<{ symbol: string; series: ISeriesApi<"Line"> }>>([]);
+  const [isMinimized, setIsMinimized] = React.useState(false);
 
   const instruments = React.useMemo(() => {
-    return (volatility?.instruments ?? []).filter((inst) => inst.points.length > 0);
+    const valid = (volatility?.instruments ?? []).filter((inst) => inst.points.length > 0);
+    const preferred = ["EURUSD", "GBPUSD", "USDJPY"];
+    const selected = preferred
+      .map((symbol) => valid.find((inst) => inst.symbol === symbol))
+      .filter((inst): inst is (typeof valid)[number] => Boolean(inst));
+
+    if (selected.length === 3) return selected;
+    return valid.slice(0, 3);
   }, [volatility]);
 
   React.useEffect(() => {
-    if (!chartElRef.current || instruments.length === 0) return;
+    if (!chartElRef.current || instruments.length === 0 || isMinimized) return;
 
     const element = chartElRef.current;
     const chart = createChart(element, {
@@ -108,10 +117,10 @@ export function VolatilityLineChart({ volatility, className }: VolatilityLineCha
       chartRef.current = null;
       seriesRef.current = [];
     };
-  }, [instruments]);
+  }, [instruments, isMinimized]);
 
   React.useEffect(() => {
-    if (!chartRef.current || seriesRef.current.length === 0) return;
+    if (!chartRef.current || seriesRef.current.length === 0 || isMinimized) return;
 
     for (const { symbol, series } of seriesRef.current) {
       const inst = instruments.find((entry) => entry.symbol === symbol);
@@ -131,21 +140,35 @@ export function VolatilityLineChart({ volatility, className }: VolatilityLineCha
   return (
     <Card className={cn("border-white/[0.08] bg-zinc-950/45", className)}>
       <CardHeader className="gap-1 pb-2">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-          Volatility
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+              Volatility
+            </div>
+            <div className="text-sm font-semibold text-zinc-100">ATR% Line Chart (3 pairs)</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsMinimized((prev) => !prev)}
+            className="inline-flex items-center gap-1 rounded-md border border-white/[0.12] bg-white/[0.03] px-2 py-1 text-[10px] font-medium text-zinc-300 transition hover:bg-white/[0.06]"
+          >
+            {isMinimized ? <Maximize2 className="h-3 w-3" /> : <Minimize2 className="h-3 w-3" />}
+            {isMinimized ? "Maximize" : "Minimize"}
+          </button>
         </div>
-        <div className="text-sm font-semibold text-zinc-100">ATR% Line Chart (4 pairs)</div>
         <div className="text-[11px] text-zinc-500">
           {volatility?.timeframe ?? "1H"} · ATR {volatility?.period ?? 14} · Higher line = more volatile
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4 pt-0">
-        <div className="overflow-hidden rounded-lg border border-white/[0.06] bg-black/25 p-2">
-          <div ref={chartElRef} className="h-[280px] w-full" />
-        </div>
+        {!isMinimized && (
+          <div className="overflow-hidden rounded-lg border border-white/[0.06] bg-black/25 p-2">
+            <div ref={chartElRef} className="h-[280px] w-full" />
+          </div>
+        )}
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {instruments.map((inst) => (
             <div
               key={inst.symbol}
