@@ -21,9 +21,9 @@ function statusTone(status: MarketSession["status"]) {
       };
     case "Closed":
       return {
-        card: "border-white/10 bg-gradient-to-b from-white/[0.03] to-white/[0.015]",
-        dot: "bg-zinc-300",
-        time: "text-zinc-100",
+        card: "border-indigo-400/20 bg-gradient-to-b from-indigo-500/[0.08] to-indigo-500/[0.03]",
+        dot: "bg-indigo-300",
+        time: "text-indigo-100",
       };
   }
 }

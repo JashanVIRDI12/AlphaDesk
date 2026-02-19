@@ -623,9 +623,9 @@ export function InstrumentCard({
         onClick={() => setShowDetail(true)}
         className="block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded-xl"
       >
-        <Card className="group relative overflow-hidden border-white/[0.07] bg-gradient-to-b from-white/[0.035] to-white/[0.01] shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_16px_60px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.12] hover:shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_20px_70px_rgba(0,0,0,0.55)] cursor-pointer">
+        <Card className="group relative overflow-hidden border-white/[0.08] bg-gradient-to-b from-indigo-500/[0.08] via-purple-500/[0.04] to-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_18px_66px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-0.5 hover:border-indigo-300/25 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_24px_80px_rgba(0,0,0,0.6)] cursor-pointer">
           {/* Edge highlights */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-300/25 to-transparent" />
 
           {/* Bias-colored side strip */}
           <div

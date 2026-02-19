@@ -153,10 +153,11 @@ export function Greeting({
         : "border-white/10 bg-white/[0.04] text-zinc-300";
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.045] via-white/[0.02] to-transparent p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_18px_60px_rgba(0,0,0,0.35)] md:p-5">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.1] to-transparent" />
+    <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-indigo-500/[0.08] via-purple-500/[0.04] to-transparent p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_22px_70px_rgba(0,0,0,0.45)] md:p-5">
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-indigo-500/[0.06] via-purple-500/[0.04] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-300/20 to-transparent" />
 
-      <div className="space-y-4">
+      <div className="relative space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className={cn("inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]", statusTone)}>
             {statusLabel}

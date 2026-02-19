@@ -62,74 +62,47 @@ function FloatingParticles() {
         </div>
     );
 }
-// Enhanced animated gradient mesh
+// Liquid glass gradient background
 function BackgroundMesh() {
     return (
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            {/* Primary glow — top center */}
+            {/* Liquid gradient orbs */}
             <motion.div
-                className="absolute left-1/2 top-0 h-[800px] w-[1000px] -translate-x-1/2 -translate-y-1/3 rounded-full bg-gradient-to-b from-emerald-500/[0.05] via-zinc-500/[0.02] to-transparent blur-[100px]"
+                className="absolute left-1/4 top-1/4 h-[800px] w-[800px] rounded-full bg-gradient-to-br from-indigo-500/30 via-purple-500/20 to-transparent blur-3xl"
                 animate={{
-                    scale: [1, 1.05, 1.02, 1],
-                    opacity: [0.4, 0.6, 0.5, 0.4],
-                    x: ["-50%", "-48%", "-52%", "-50%"],
+                    x: [0, 100, 0],
+                    y: [0, -50, 0],
+                    scale: [1, 1.2, 1],
                 }}
-                transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+                transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
             />
-
-            {/* Secondary violet glow */}
             <motion.div
-                className="absolute -right-32 top-20 h-[600px] w-[600px] rounded-full bg-violet-500/[0.025] blur-[120px]"
+                className="absolute right-1/4 top-1/3 h-[600px] w-[600px] rounded-full bg-gradient-to-bl from-blue-500/25 via-indigo-500/15 to-transparent blur-3xl"
                 animate={{
+                    x: [0, -80, 0],
+                    y: [0, 60, 0],
+                    scale: [1, 1.15, 1],
+                }}
+                transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+            />
+            <motion.div
+                className="absolute bottom-0 left-1/2 h-[700px] w-[900px] -translate-x-1/2 rounded-full bg-gradient-to-t from-purple-600/20 via-indigo-600/10 to-transparent blur-3xl"
+                animate={{
+                    opacity: [0.3, 0.6, 0.3],
                     scale: [1, 1.1, 1],
-                    x: [0, 30, 0],
-                    y: [0, -20, 0],
-                    opacity: [0.2, 0.4, 0.2],
-                }}
-                transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
-            />
-
-            {/* Tertiary sky glow */}
-            <motion.div
-                className="absolute -left-32 top-40 h-[500px] w-[500px] rounded-full bg-sky-500/[0.02] blur-[100px]"
-                animate={{
-                    scale: [1, 1.08, 1],
-                    x: [0, -20, 0],
-                    y: [0, 30, 0],
-                    opacity: [0.15, 0.35, 0.15],
-                }}
-                transition={{ duration: 14, repeat: Infinity, ease: "easeInOut", delay: 3 }}
-            />
-
-            {/* Bottom glow */}
-            <motion.div
-                className="absolute bottom-0 left-1/2 h-[400px] w-[800px] -translate-x-1/2 translate-y-1/2 rounded-full bg-emerald-500/[0.03] blur-[80px]"
-                animate={{
-                    opacity: [0.2, 0.4, 0.2],
-                    scale: [1, 1.05, 1],
                 }}
                 transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
             />
 
-            {/* Animated grid lines */}
+            {/* Subtle grid */}
             <div
-                className="absolute inset-0 opacity-[0.015]"
+                className="absolute inset-0 opacity-[0.02]"
                 style={{
                     backgroundImage:
-                        "linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)",
-                    backgroundSize: "60px 60px",
+                        "linear-gradient(rgba(139, 92, 246, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 92, 246, 0.3) 1px, transparent 1px)",
+                    backgroundSize: "100px 100px",
                 }}
             />
-
-            {/* Noise texture */}
-            <div
-                className="absolute inset-0 opacity-[0.015]"
-                style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-                }}
-            />
-
-            <FloatingParticles />
         </div>
     );
 }
@@ -204,20 +177,20 @@ function AnimatedBadge() {
             transition={{ duration: 0.7, delay: 0.1, ease: [0.23, 1, 0.32, 1] }}
         >
             <motion.div
-                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-emerald-500/10 bg-emerald-500/[0.03] px-4 py-1.5"
-                whileHover={{ scale: 1.02, borderColor: "rgba(16, 185, 129, 0.2)" }}
+                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-indigo-500/20 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 px-4 py-1.5 backdrop-blur-xl"
+                whileHover={{ scale: 1.02, borderColor: "rgba(99, 102, 241, 0.3)" }}
                 transition={{ duration: 0.2 }}
             >
                 <motion.div
                     animate={{ rotate: [0, 15, -15, 0] }}
                     transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
                 >
-                    <Zap className="h-3 w-3 text-emerald-500/60" />
+                    <Zap className="h-3 w-3 text-indigo-400/80" />
                 </motion.div>
-                <span className="text-[11px] font-semibold tracking-[0.08em] uppercase text-emerald-400/60">
-                    AI-Powered Trading Intelligence
+                <span className="text-[11px] font-semibold tracking-[0.08em] uppercase text-indigo-300/90">
+                    AI-Powered Forex Trading Intelligence
                 </span>
-                <div className="absolute inset-0 -translate-x-full animate-[shimmer_3s_infinite] bg-gradient-to-r from-transparent via-white/[0.05] to-transparent" />
+                <div className="absolute inset-0 -translate-x-full animate-[shimmer_3s_infinite] bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
             </motion.div>
         </motion.div>
     );
@@ -255,122 +228,136 @@ export function HeroSection() {
         setMounted(true);
     }, []);
     return (
-        <section className="relative min-h-[95vh] flex items-center overflow-hidden">
+        <section className="relative min-h-screen flex items-center overflow-hidden bg-black">
             <BackgroundMesh />
 
-            <div className="relative mx-auto max-w-6xl px-6 py-20 md:py-28">
+            <div className="relative mx-auto max-w-6xl px-6 py-32 md:py-40">
                 <AnimatedBadge />
 
-                {/* Headline with enhanced animations */}
-                <div className="relative">
-                    {/* Floating glow behind text */}
-                    <motion.div
-                        className="pointer-events-none absolute left-1/2 top-1/2 h-40 w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/[0.03] blur-[100px]"
-                        animate={{
-                            scale: [1, 1.15, 1],
-                            opacity: [0.3, 0.5, 0.3],
-                        }}
-                        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                    />
-
-                    <h1 className="relative mx-auto max-w-4xl text-center text-[clamp(2.5rem,5.5vw,4.5rem)] font-bold leading-[1.08] tracking-[-0.03em] perspective-[1000px]">
-                        <span className="bg-gradient-to-b from-white via-zinc-300 to-zinc-500 bg-clip-text text-transparent">
-                            <span className="sm:hidden">The Terminal Built{" "}</span>
-                            <span className="hidden sm:inline">
-                                {mounted ? <SplitText text="The Terminal Built" /> : "The Terminal Built"}
-                            </span>
+                {/* Headline with dramatic typography */}
+                <div className="relative text-center">
+                    <motion.h1 
+                        className="mx-auto max-w-5xl text-[clamp(3rem,7vw,6.5rem)] font-bold leading-[1.05] tracking-[-0.05em]"
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
+                    >
+                        <span className="bg-gradient-to-b from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent">
+                            Forex intelligence, built{" "}
                         </span>
-                        <br className="hidden sm:block" />
-                        <motion.span
-                            className="bg-gradient-to-r from-zinc-200 via-emerald-200/70 to-zinc-300 bg-clip-text text-transparent"
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.8, delay: 0.8, ease: [0.23, 1, 0.32, 1] }}
-                        >
-                            for Serious Traders
-                        </motion.span>
-                    </h1>
+                        <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+                            for the next generation
+                        </span>
+                        <span className="bg-gradient-to-b from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent">
+                            .
+                        </span>
+                    </motion.h1>
                 </div>
 
                 {/* Subheadline */}
                 <motion.p
-                    className="mx-auto mt-6 max-w-lg text-center text-[15px] leading-relaxed text-zinc-500 md:text-[16px] md:leading-7"
+                    className="mx-auto mt-8 max-w-2xl text-center text-[17px] leading-relaxed text-zinc-400 md:text-[18px] md:leading-8"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.7, delay: 1.2, ease: [0.23, 1, 0.32, 1] }}
+                    transition={{ duration: 0.5, delay: 0.08, ease: [0.23, 1, 0.32, 1] }}
                 >
-                    Real-time news, 1H/4H technical analysis, and macro
-                    fundamentals — unified by AI into a single institutional dashboard.
+                    Real-time insights, powerful analytics, and complete control over your forex trading — all in one secure platform.
                 </motion.p>
 
-                {/* CTA buttons with magnetic effect */}
+
+                {/* Glassmorphic CTA buttons */}
                 <motion.div
-                    className="mt-10 flex flex-col items-center gap-3.5 sm:flex-row sm:justify-center"
+                    className="mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.7, delay: 1.4, ease: [0.23, 1, 0.32, 1] }}
+                    transition={{ duration: 0.45, delay: 0.12, ease: [0.23, 1, 0.32, 1] }}
                 >
-                    <MagneticButton href="/dashboard" variant="primary">
-                        Access Terminal
-                    </MagneticButton>
-                    <MagneticButton href="#features" variant="secondary">
-                        Explore Features
-                    </MagneticButton>
+                    <Link
+                        href="/dashboard"
+                        className="group relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br from-indigo-500/80 via-purple-500/80 to-indigo-500/80 px-8 py-4 text-[15px] font-semibold text-white shadow-2xl shadow-indigo-500/50 backdrop-blur-xl transition-all duration-500 hover:scale-105 hover:border-white/30 hover:shadow-indigo-500/60"
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+                        <span className="relative z-10">Start Managing Smarter</span>
+                    </Link>
+                    <Link
+                        href="#features"
+                        className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-[15px] font-medium text-zinc-200 backdrop-blur-xl transition-all duration-500 hover:scale-105 hover:border-white/20 hover:bg-white/10"
+                    >
+                        <span className="relative z-10">Explore The Platform</span>
+                    </Link>
                 </motion.div>
 
-                {/* Instrument chips with enhanced hover */}
-                <div className="mt-16 flex items-center justify-center gap-3 flex-wrap">
-                    {PAIRS.map((pair, i) => {
-                        const Icon = pair.icon;
-                        return (
-                            <motion.div
-                                key={pair.label}
-                                initial={{ opacity: 0, y: 20, scale: 0.8 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                transition={{
-                                    duration: 0.5,
-                                    delay: 1.6 + i * 0.1,
-                                    ease: [0.23, 1, 0.32, 1],
-                                }}
-                                whileHover={{ 
-                                    scale: 1.05, 
-                                    y: -2,
-                                    transition: { duration: 0.2 }
-                                }}
-                                className="group flex items-center gap-2.5 rounded-lg border border-white/[0.05] bg-white/[0.015] px-4 py-2.5 transition-all duration-300 hover:border-white/[0.1] hover:bg-white/[0.025] cursor-default"
-                            >
-                                <motion.div
-                                    className="relative h-1.5 w-1.5"
-                                    animate={{ scale: [1, 1.2, 1] }}
-                                    transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
-                                >
-                                    <div className="absolute inset-0 animate-ping rounded-full bg-emerald-400/30" />
-                                    <div className="absolute inset-0 rounded-full bg-emerald-400/60" />
-                                </motion.div>
-                                <Icon className="h-3.5 w-3.5 text-zinc-600 transition-colors duration-300 group-hover:text-emerald-400/70" />
-                                <span className="text-[12px] font-mono font-semibold tracking-wide text-zinc-500 transition-colors duration-300 group-hover:text-zinc-400">
-                                    {pair.label}
-                                </span>
-                            </motion.div>
-                        );
-                    })}
-                </div>
-
-                {/* Trust line */}
+                {/* Glassmorphic stats cards */}
                 <motion.div
-                    className="mt-12 text-center"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.6, delay: 2 }}
+                    className="mt-24 md:mt-32"
+                    initial={{ opacity: 0, y: 40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.55, delay: 0.18, ease: [0.23, 1, 0.32, 1] }}
                 >
-                    <motion.p
-                        className="text-[11px] tracking-[0.12em] uppercase text-zinc-700"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 2.2 }}
-                    >
-                        Built for institutional-grade FX analysis
-                    </motion.p>
+                    <div className="relative mx-auto max-w-5xl">
+                        {/* Liquid glass card */}
+                        <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-1 backdrop-blur-2xl shadow-2xl shadow-black/50">
+                            {/* Animated gradient overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-blue-500/10" />
+                            
+                            {/* Subtle grid */}
+                            <div
+                                className="absolute inset-0 opacity-[0.08]"
+                                style={{
+                                    backgroundImage:
+                                        "linear-gradient(rgba(139, 92, 246, 0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 92, 246, 0.5) 1px, transparent 1px)",
+                                    backgroundSize: "50px 50px",
+                                }}
+                            />
+                            
+                            <div className="relative grid grid-cols-1 gap-px overflow-hidden rounded-[2rem] md:grid-cols-3">
+                                {/* Currency Pairs */}
+                                <div className="bg-black/40 p-8 text-center backdrop-blur-xl">
+                                    <div className="mb-2 text-[11px] font-semibold tracking-wider uppercase text-zinc-500">
+                                        Currency Pairs
+                                    </div>
+                                    <div className="mb-1 text-5xl font-bold">
+                                        <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+                                            4+
+                                        </span>
+                                    </div>
+                                    <div className="text-[13px] text-zinc-600">
+                                        EUR/USD, GBP/USD, USD/JPY, XAU/USD
+                                    </div>
+                                </div>
+
+                                {/* Data Refresh */}
+                                <div className="bg-black/40 p-8 text-center backdrop-blur-xl">
+                                    <div className="mb-2 text-[11px] font-semibold tracking-wider uppercase text-zinc-500">
+                                        Data Refresh
+                                    </div>
+                                    <div className="mb-1 text-5xl font-bold">
+                                        <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+                                            1min
+                                        </span>
+                                    </div>
+                                    <div className="text-[13px] text-zinc-600">
+                                        Real-time news & market data
+                                    </div>
+                                </div>
+
+                                {/* AI Models */}
+                                <div className="bg-black/40 p-8 text-center backdrop-blur-xl">
+                                    <div className="mb-2 text-[11px] font-semibold tracking-wider uppercase text-zinc-500">
+                                        AI Models
+                                    </div>
+                                    <div className="mb-1 text-5xl font-bold">
+                                        <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+                                            3+
+                                        </span>
+                                    </div>
+                                    <div className="text-[13px] text-zinc-600">
+                                        GPT-5, Gemini, Claude analysis
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </motion.div>
             </div>
         </section>

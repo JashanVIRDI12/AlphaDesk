@@ -197,7 +197,7 @@ export function MacroPanel() {
 
   if (loading) {
     return (
-      <Card className="relative overflow-hidden border-white/[0.06] bg-gradient-to-b from-white/[0.025] to-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_20px_80px_rgba(0,0,0,0.5)]">
+      <Card className="relative overflow-hidden border-white/[0.08] bg-gradient-to-b from-indigo-500/[0.08] via-purple-500/[0.04] to-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_22px_80px_rgba(0,0,0,0.5)]">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-3">
             <div className="space-y-2">
@@ -231,7 +231,7 @@ export function MacroPanel() {
 
   if (error && !deskData) {
     return (
-      <Card className="relative overflow-hidden border-white/[0.06] bg-gradient-to-b from-white/[0.025] to-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_20px_80px_rgba(0,0,0,0.5)]">
+      <Card className="relative overflow-hidden border-white/[0.08] bg-gradient-to-b from-indigo-500/[0.08] via-purple-500/[0.04] to-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_22px_80px_rgba(0,0,0,0.5)]">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -284,7 +284,7 @@ export function MacroPanel() {
     : "";
 
   return (
-    <Card className="relative overflow-hidden border-white/[0.06] bg-gradient-to-b from-white/[0.025] to-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_20px_80px_rgba(0,0,0,0.5)]">
+    <Card className="relative overflow-hidden border-white/[0.08] bg-gradient-to-b from-indigo-500/[0.08] via-purple-500/[0.04] to-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_22px_80px_rgba(0,0,0,0.5)]">
       {/* Ambient top glow */}
       <div className="pointer-events-none absolute inset-0 opacity-50 [mask-image:radial-gradient(70%_50%_at_50%_0%,black,transparent)]">
         <div className="absolute -top-20 left-1/2 h-40 w-[28rem] -translate-x-1/2 rounded-full bg-purple-500/[0.04] blur-3xl" />

@@ -12,7 +12,7 @@ export function DashboardShell({
   return (
     <div
       className={cn(
-        "min-h-screen bg-[radial-gradient(1000px_520px_at_50%_-20%,rgba(255,255,255,0.06),transparent_62%),radial-gradient(900px_420px_at_8%_12%,rgba(99,102,241,0.08),transparent_58%),radial-gradient(820px_420px_at_92%_18%,rgba(16,185,129,0.06),transparent_60%)]",
+        "min-h-screen bg-[#06060a] bg-[radial-gradient(1200px_620px_at_50%_-15%,rgba(129,140,248,0.14),transparent_62%),radial-gradient(900px_420px_at_0%_8%,rgba(139,92,246,0.10),transparent_60%),radial-gradient(900px_500px_at_100%_12%,rgba(99,102,241,0.10),transparent_58%)]",
         className,
       )}
     >

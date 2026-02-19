@@ -2,6 +2,7 @@ import { getMockMarketData } from "@/data/market";
 
 import { AuthGate } from "@/components/auth/auth-gate";
 import { DashboardHeader } from "@/components/trading/dashboard-header";
+import { DashboardFooter } from "@/components/trading/dashboard-footer";
 import { DashboardShell } from "@/components/trading/dashboard-shell";
 import { FundamentalsPanel } from "@/components/trading/fundamentals-panel";
 import { Greeting } from "@/components/trading/greeting";
@@ -20,9 +21,9 @@ export default function Dashboard() {
             <AuthGate>
                 <DashboardHeader />
 
-                <main className="mx-auto w-full max-w-[1400px] px-4 py-5 sm:py-6 md:px-6 md:py-8">
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-                        <section className="space-y-7 lg:col-span-8">
+                <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:py-7 md:px-6 md:py-9">
+                    <div className="grid grid-cols-1 gap-7 lg:grid-cols-12">
+                        <section className="space-y-8 lg:col-span-8">
                             <Greeting
                                 title={data.greeting.title}
                                 subtitle={data.greeting.subtitle}
@@ -45,7 +46,7 @@ export default function Dashboard() {
                             </div>
                         </section>
 
-                        <aside className="space-y-6 lg:col-span-4 lg:sticky lg:top-[76px] lg:self-start">
+                        <aside className="space-y-7 lg:col-span-4 lg:sticky lg:top-[84px] lg:self-start">
                             <div className="hidden space-y-3 lg:block">
                                 <NoTradeDayBanner />
                                 <MarketSessions sessions={data.sessions} />
@@ -66,6 +67,8 @@ export default function Dashboard() {
                         </aside>
                     </div>
                 </main>
+
+                <DashboardFooter />
             </AuthGate>
         </DashboardShell>
     );

@@ -138,7 +138,7 @@ export function VolatilityLineChart({ volatility, className }: VolatilityLineCha
   if (instruments.length === 0) return null;
 
   return (
-    <Card className={cn("border-white/[0.08] bg-zinc-950/45", className)}>
+    <Card className={cn("border-white/[0.08] bg-gradient-to-b from-indigo-500/[0.08] via-purple-500/[0.04] to-transparent", className)}>
       <CardHeader className="gap-1 pb-2">
         <div className="flex items-center justify-between gap-3">
           <div>

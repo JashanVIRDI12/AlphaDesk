@@ -9,11 +9,12 @@ export const metadata: Metadata = {
 
 function LegalNav() {
     return (
-        <nav className="sticky top-0 z-50 border-b border-white/[0.04] bg-[#07070b]/80 backdrop-blur-xl">
+        <nav className="sticky top-0 z-50 border-b border-white/10 bg-black/40 backdrop-blur-2xl">
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-indigo-500/5" />
             <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
-                <Link href="/" className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04]">
-                        <TrendingUp className="h-4 w-4 text-emerald-400" />
+                <Link href="/" className="group flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] transition-all duration-300 group-hover:border-indigo-500/30 group-hover:bg-indigo-500/[0.08]">
+                        <TrendingUp className="h-4 w-4 text-zinc-400 transition-colors duration-300 group-hover:text-indigo-400" />
                     </div>
                     <span className="text-[15px] font-bold tracking-tight text-zinc-100">
                         GetTradingBias
@@ -33,7 +34,7 @@ function LegalNav() {
 
 export default function TermsPage() {
     return (
-        <div className="min-h-screen bg-[#07070b] text-zinc-300">
+        <div className="min-h-screen bg-[#06060a] bg-[radial-gradient(1200px_620px_at_50%_-15%,rgba(129,140,248,0.14),transparent_62%),radial-gradient(900px_420px_at_0%_8%,rgba(139,92,246,0.10),transparent_60%),radial-gradient(900px_500px_at_100%_12%,rgba(99,102,241,0.10),transparent_58%)] text-zinc-300">
             <LegalNav />
 
             <main className="mx-auto max-w-4xl px-6 py-16 md:py-24">
@@ -269,15 +270,15 @@ export default function TermsPage() {
             </main>
 
             {/* Footer */}
-            <footer className="border-t border-white/[0.04] bg-[#050508]">
+            <footer className="border-t border-white/[0.03] bg-[#050508]">
                 <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-6">
                     <p className="text-[11px] text-zinc-700">
                         © GetTradingBias. All rights reserved.
                     </p>
                     <div className="flex gap-6">
-                        <Link href="/privacy" className="text-[11px] text-zinc-600 hover:text-zinc-400">Privacy</Link>
-                        <Link href="/terms" className="text-[11px] text-zinc-600 hover:text-zinc-400">Terms</Link>
-                        <Link href="/disclaimer" className="text-[11px] text-zinc-600 hover:text-zinc-400">Disclaimer</Link>
+                        <Link href="/privacy" className="text-[11px] text-zinc-700 transition-colors hover:text-zinc-500">Privacy</Link>
+                        <Link href="/terms" className="text-[11px] text-zinc-700 transition-colors hover:text-zinc-500">Terms</Link>
+                        <Link href="/disclaimer" className="text-[11px] text-zinc-700 transition-colors hover:text-zinc-500">Disclaimer</Link>
                     </div>
                 </div>
             </footer>

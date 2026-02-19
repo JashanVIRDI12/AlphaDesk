@@ -219,10 +219,10 @@ export function NoTradeDayBanner() {
 
     return (
         <div
-            className={`relative overflow-hidden rounded-xl border bg-gradient-to-r px-4 py-3 ${toneClasses}`}
+            className={`relative overflow-hidden rounded-xl border bg-gradient-to-r px-4 py-3 shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_18px_50px_rgba(0,0,0,0.35)] ${toneClasses}`}
         >
             {/* Subtle glow */}
-            <div className="pointer-events-none absolute -top-10 left-1/2 h-20 w-60 -translate-x-1/2 rounded-full bg-white/10 blur-3xl" />
+            <div className="pointer-events-none absolute -top-10 left-1/2 h-20 w-60 -translate-x-1/2 rounded-full bg-indigo-400/20 blur-3xl" />
 
             <div className="relative flex items-center gap-3">
                 <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${iconTone}`}>

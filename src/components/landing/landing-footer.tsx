@@ -71,10 +71,10 @@ export function LandingFooter() {
                                     Features
                                 </Link>
                                 <Link
-                                    href="/#methodology"
+                                    href="/#inside-dashboard"
                                     className="text-[12px] text-zinc-700 transition-colors hover:text-zinc-500"
                                 >
-                                    Methodology
+                                    Inside Dashboard
                                 </Link>
                             </div>
                         </div>

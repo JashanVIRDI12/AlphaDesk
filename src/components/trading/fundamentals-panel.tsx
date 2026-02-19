@@ -469,9 +469,9 @@ export function FundamentalsPanel({
   }, [todayKey, riskMode, overviewText]);
 
   return (
-    <Card className="relative overflow-hidden border-white/[0.06] bg-gradient-to-b from-white/[0.025] to-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_20px_80px_rgba(0,0,0,0.5)]">
+    <Card className="relative overflow-hidden border-white/[0.08] bg-gradient-to-b from-indigo-500/[0.08] via-purple-500/[0.04] to-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_22px_80px_rgba(0,0,0,0.5)]">
       {/* Top edge highlight */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-300/25 to-transparent" />
 
       {/* ── Header ── */}
       <CardHeader className="px-4 pb-2.5 pt-3.5">

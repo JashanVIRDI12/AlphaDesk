@@ -18,11 +18,67 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GetTradingBias",
-  description: "AI-powered FX trading intelligence platform",
-  icons: {
-    icon: "/favicon.png",
+  title: {
+    default: "GetTradingBias — AI-Powered Forex Trading Terminal & Currency Analysis Platform",
+    template: "%s | GetTradingBias",
   },
+  description:
+    "Professional forex trading terminal with AI-powered currency analysis, real-time FX news, technical indicators, and macro fundamentals. Trade EUR/USD, GBP/USD, USD/JPY with institutional-grade insights.",
+  keywords: [
+    "forex trading platform",
+    "FX trading terminal",
+    "currency trading analysis",
+    "AI forex signals",
+    "real-time forex news",
+    "technical analysis forex",
+    "EUR/USD analysis",
+    "GBP/USD trading",
+    "USD/JPY signals",
+    "forex macro analysis",
+    "institutional forex trading",
+    "currency pair analysis",
+    "forex AI platform",
+    "trading bias indicator",
+    "FX market intelligence",
+  ],
+  authors: [{ name: "GetTradingBias" }],
+  creator: "GetTradingBias",
+  publisher: "GetTradingBias",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://gettradingbias.com",
+    siteName: "GetTradingBias",
+    title: "GetTradingBias — AI-Powered Forex Trading Terminal",
+    description:
+      "Professional forex trading terminal with AI-powered currency analysis, real-time FX news, and institutional-grade insights for EUR/USD, GBP/USD, USD/JPY trading.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GetTradingBias — AI-Powered Forex Trading Terminal",
+    description:
+      "Professional forex trading terminal with AI-powered currency analysis and real-time FX market intelligence.",
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.png", type: "image/png", sizes: "32x32" },
+    ],
+    apple: "/favicon.png",
+    shortcut: "/favicon.png",
+  },
+  metadataBase: new URL("https://gettradingbias.com"),
 };
 
 export default function RootLayout({
