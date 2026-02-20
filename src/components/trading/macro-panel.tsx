@@ -171,6 +171,7 @@ export function MacroPanel() {
   const { data: deskData, isLoading: deskLoading, error: deskError, refetch } = useMacroDesk();
   const { data: indicatorData, isLoading: indicatorLoading } = useMacroData();
   const [, forceFreshnessTick] = React.useState(0);
+  const [showAllThemes, setShowAllThemes] = React.useState(false);
 
   const macroSnapshotLabel = React.useMemo(() => {
     const t = indicatorData?.generatedAt;
@@ -262,11 +263,14 @@ export function MacroPanel() {
   if (!deskData) return null;
 
   const riskSentiment = (deskData.riskSentiment || deskData.bias || "Neutral").trim();
+  const riskSentimentLabel = riskSentiment.replace(/\s*\(tactical\)$/i, "").trim();
   const analysisThemes = Array.isArray(deskData.keyThemes)
     ? deskData.keyThemes
     : Array.isArray(deskData.bullets)
       ? deskData.bullets
       : [];
+  const visibleThemes = showAllThemes ? analysisThemes : analysisThemes.slice(0, 3);
+  const topDrivers = analysisThemes.slice(0, 3);
   const takeaway = deskData.brief || deskData.notes || "";
   const biasStyle =
     BIAS_STYLES[riskSentiment] ??
@@ -282,6 +286,13 @@ export function MacroPanel() {
       return `${hrs}h ago`;
     })()
     : "";
+
+  const confidenceReason =
+    riskSentiment.toLowerCase().includes("risk-on")
+      ? "Higher conviction: central-bank and growth signals are aligned with risk appetite."
+      : riskSentiment.toLowerCase().includes("risk-off")
+        ? "Defensive conviction: inflation/rate or geopolitical pressure is driving caution."
+        : "Balanced conviction: macro signals are mixed, so risk stance remains neutral.";
 
   return (
     <Card className="relative overflow-hidden border-white/[0.08] bg-gradient-to-b from-indigo-500/[0.08] via-purple-500/[0.04] to-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_22px_80px_rgba(0,0,0,0.5)]">
@@ -317,7 +328,7 @@ export function MacroPanel() {
                 biasStyle,
               )}
             >
-              {riskSentiment.toUpperCase()}
+              {riskSentimentLabel.toUpperCase()}
             </Badge>
             <button
               onClick={() => refetch()}
@@ -388,13 +399,46 @@ export function MacroPanel() {
           )}
 
           <ul className="space-y-3 text-[13px] leading-[1.6] text-zinc-400">
-            {analysisThemes.map((bullet: string, i: number) => (
+            {visibleThemes.map((bullet: string, i: number) => (
               <li key={i} className="flex gap-2.5">
                 <span className="mt-[9px] h-[3px] w-[3px] shrink-0 rounded-full bg-zinc-600" />
                 <span>{bullet}</span>
               </li>
             ))}
           </ul>
+          {analysisThemes.length > 3 ? (
+            <button
+              type="button"
+              onClick={() => setShowAllThemes((v) => !v)}
+              className="rounded-lg border border-white/[0.08] bg-white/[0.02] px-2.5 py-1.5 text-[10px] font-medium tracking-wide text-zinc-400 transition-all hover:border-white/[0.14] hover:text-zinc-200"
+            >
+              {showAllThemes ? "Show less analysis" : `Show more analysis (${analysisThemes.length - 3})`}
+            </button>
+          ) : null}
+        </div>
+
+        <div className="rounded-lg border border-white/[0.05] bg-white/[0.015] px-3.5 py-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+              Drivers
+            </span>
+            {deskData.generatedAt ? (
+              <span className="text-[9px] tracking-wide text-zinc-600">
+                {new Date(deskData.generatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            ) : null}
+          </div>
+          <div className="space-y-1.5">
+            {topDrivers.map((driver, idx) => (
+              <div key={`${driver}-${idx}`} className="flex items-start gap-1.5 text-[11px] leading-[1.45] text-zinc-400">
+                <span className="mt-[7px] inline-block h-[3px] w-[3px] shrink-0 rounded-full bg-indigo-300/70" />
+                <span>{driver}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 border-t border-white/[0.05] pt-2 text-[10px] leading-[1.45] text-zinc-500">
+            {confidenceReason}
+          </p>
         </div>
 
         {/* ── Tactical Note ── */}

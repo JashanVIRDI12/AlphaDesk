@@ -30,6 +30,26 @@ export type InstrumentData = {
   macroBackdrop?: string;
 };
 
+function compactText(input?: string, limit = 78): string {
+  if (!input) return "";
+  const normalized = input.replace(/\s+/g, " ").trim();
+  if (normalized.length <= limit) return normalized;
+  return `${normalized.slice(0, limit - 1).trimEnd()}…`;
+}
+
+function confidenceReason(instrument: InstrumentData): string {
+  const availableDrivers = [instrument.newsDriver, instrument.technicalLevels, instrument.macroBackdrop].filter(Boolean).length;
+  if (instrument.confidence >= 80) {
+    return "High confidence due to aligned news, technical and macro signals.";
+  }
+  if (instrument.confidence >= 65) {
+    return availableDrivers >= 3
+      ? "Moderate-high confidence with broad cross-signal confirmation."
+      : "Moderate-high confidence with partial cross-signal confirmation.";
+  }
+  return "Cautious confidence: mixed or weaker signal alignment across drivers.";
+}
+
 /* ── TradingView links & widget symbols ── */
 const TV_CHART_LINKS: Record<string, string> = {
   EURUSD: "https://www.tradingview.com/chart/?symbol=FX:EURUSD",
@@ -611,17 +631,33 @@ function InstrumentDetailModal({
    ════════════════════════════════════════════════════════════ */
 export function InstrumentCard({
   instrument,
+  generatedAt,
 }: {
   instrument: InstrumentData;
+  generatedAt?: string;
 }) {
   const [showDetail, setShowDetail] = React.useState(false);
+  const [showQuickDrivers, setShowQuickDrivers] = React.useState(false);
   const isBullish = instrument.bias === "Bullish";
+  const drivers = [
+    { label: "NEWS", value: compactText(instrument.newsDriver) },
+    { label: "TECH", value: compactText(instrument.technicalLevels) },
+    { label: "MACRO", value: compactText(instrument.macroBackdrop) },
+  ].filter((d) => d.value).slice(0, 3);
 
   return (
     <>
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setShowDetail(true)}
-        className="block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded-xl"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setShowDetail(true);
+          }
+        }}
+        className="block w-full cursor-pointer rounded-xl text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
       >
         <Card className="group relative overflow-hidden border-white/[0.08] bg-gradient-to-b from-indigo-500/[0.08] via-purple-500/[0.04] to-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_18px_66px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-0.5 hover:border-indigo-300/25 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_24px_80px_rgba(0,0,0,0.6)] cursor-pointer">
           {/* Edge highlights */}
@@ -698,9 +734,54 @@ export function InstrumentCard({
             </div>
 
             {/* Summary */}
-            <p className="text-[12px] leading-relaxed text-zinc-400 line-clamp-2 min-h-[36px]">
+            <p className="text-[12px] leading-relaxed text-zinc-400 line-clamp-1 min-h-[18px]">
               {instrument.summary}
             </p>
+
+            {drivers.length > 0 ? (
+              <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowQuickDrivers((v) => !v);
+                  }}
+                  className="flex w-full items-center justify-between text-left"
+                >
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                    Quick drivers
+                  </span>
+                  <span className="text-[9px] text-zinc-500">
+                    {showQuickDrivers ? "Hide" : "Show"}
+                  </span>
+                </button>
+
+                {showQuickDrivers ? (
+                  <div className="mt-2 space-y-1.5 border-t border-white/[0.05] pt-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[9px] tracking-wide text-zinc-600">Top 3 signals</span>
+                      {generatedAt ? (
+                        <span className="text-[9px] tracking-wide text-zinc-600">
+                          {new Date(generatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      ) : null}
+                    </div>
+                    {drivers.map((driver) => (
+                      <div key={driver.label} className="flex items-start gap-1.5 text-[10px] leading-[1.45]">
+                        <span className="mt-0.5 rounded border border-indigo-400/25 bg-indigo-500/[0.12] px-1 py-[1px] text-[8px] font-semibold tracking-[0.12em] text-indigo-200">
+                          {driver.label}
+                        </span>
+                        <span className="text-zinc-400">{driver.value}</span>
+                      </div>
+                    ))}
+                    <p className="mt-2 border-t border-white/[0.05] pt-2 text-[10px] leading-[1.45] text-zinc-500">
+                      {confidenceReason(instrument)}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             {/* Tap hint */}
             <div className="flex items-center justify-center gap-1.5 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
@@ -710,7 +791,7 @@ export function InstrumentCard({
             </div>
           </CardContent>
         </Card>
-      </button>
+      </div>
 
       {/* Detail Modal */}
       {showDetail && (

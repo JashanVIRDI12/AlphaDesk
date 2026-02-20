@@ -163,7 +163,9 @@ export function Greeting({
             {statusLabel}
           </span>
           <span className="text-[10px] tracking-wide text-zinc-500">
-            {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            {mounted
+              ? now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+              : "--:--:--"}
           </span>
         </div>
 

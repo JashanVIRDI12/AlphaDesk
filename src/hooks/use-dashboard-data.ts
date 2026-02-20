@@ -8,6 +8,7 @@ type NewsResponse = {
     publishedAt: string;
     ago: string;
     source: string;
+    topic?: string;
   }>;
   generatedAt: string;
 };
@@ -160,12 +161,14 @@ export function useNews() {
   return useQuery({
     queryKey: ["news"],
     queryFn: async (): Promise<NewsResponse> => {
-      const res = await fetch("/api/news");
+      const res = await fetch("/api/news", { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch news");
       return res.json();
     },
-    staleTime: 1 * 60 * 1000,
-    refetchInterval: 1 * 60 * 1000,
+    staleTime: 2 * 60 * 1000,
+    refetchInterval: 2 * 60 * 1000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
   });
 }
 

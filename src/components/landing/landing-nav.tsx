@@ -69,6 +69,12 @@ export function LandingNav() {
                         Blog
                     </Link>
                     <Link
+                        href="/updates"
+                        className="rounded-lg px-3 py-2 text-[12px] text-zinc-600 transition-all duration-200 hover:bg-white/[0.03] hover:text-zinc-300 sm:px-3.5 sm:text-[13px]"
+                    >
+                        Updates
+                    </Link>
+                    <Link
                         href="/privacy"
                         className="rounded-lg px-3 py-2 text-[12px] text-zinc-600 transition-all duration-200 hover:bg-white/[0.03] hover:text-zinc-300 sm:px-3.5 sm:text-[13px]"
                     >
@@ -168,6 +174,13 @@ export function LandingNav() {
                                     className="rounded-xl px-3 py-3 text-[13px] font-medium text-zinc-200 transition-colors hover:bg-white/[0.04]"
                                 >
                                     Blog
+                                </Link>
+                                <Link
+                                    href="/updates"
+                                    onClick={closeMobile}
+                                    className="rounded-xl px-3 py-3 text-[13px] font-medium text-zinc-200 transition-colors hover:bg-white/[0.04]"
+                                >
+                                    Updates
                                 </Link>
                                 <Link
                                     href="/privacy"

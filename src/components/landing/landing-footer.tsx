@@ -76,6 +76,12 @@ export function LandingFooter() {
                                 >
                                     Inside Dashboard
                                 </Link>
+                                <Link
+                                    href="/updates"
+                                    className="text-[12px] text-zinc-700 transition-colors hover:text-zinc-500"
+                                >
+                                    Updates
+                                </Link>
                             </div>
                         </div>
                     </div>

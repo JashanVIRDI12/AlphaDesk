@@ -54,21 +54,6 @@ function isHighImpactHeadline(h: Headline): boolean {
     return HIGH_IMPACT_TERMS.some((term) => title.includes(term));
 }
 
-function relevanceScore(h: Headline): number {
-    const title = h.title.toLowerCase();
-    let score = 0;
-
-    if (isHighImpactHeadline(h)) score += 40;
-    if (h.topic === "USD" || h.topic === "GBP" || h.topic === "JPY") score += 10;
-    if (title.includes("usd") || title.includes("dollar")) score += 8;
-    if (title.includes("jpy") || title.includes("yen")) score += 8;
-    if (title.includes("gbp") || title.includes("pound") || title.includes("sterling")) score += 8;
-    if (title.includes("eur") || title.includes("euro")) score += 6;
-    if (title.includes("risk") || title.includes("yield")) score += 4;
-
-    return score;
-}
-
 const SOURCE_COLORS: Record<string, string> = {
     USD: "text-sky-400/90",
     EUR: "text-indigo-400/90",
@@ -83,6 +68,7 @@ export function NewsHeadlines() {
     const [, forceTick] = React.useState(0);
     const [activeFilter, setActiveFilter] = React.useState<NewsFilter>("ALL");
     const [highImpactOnly, setHighImpactOnly] = React.useState(false);
+    const [showAll, setShowAll] = React.useState(false);
 
     React.useEffect(() => {
         try {
@@ -134,11 +120,9 @@ export function NewsHeadlines() {
 
         const byImpact = highImpactOnly ? byFilter.filter((h: Headline) => isHighImpactHeadline(h)) : byFilter;
 
-        return byImpact.sort((a, b) => {
-            const scoreDiff = relevanceScore(b) - relevanceScore(a);
-            if (scoreDiff !== 0) return scoreDiff;
-            return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
-        });
+        return byImpact.sort(
+            (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+        );
     }, [data?.headlines, activeFilter, highImpactOnly]);
 
     const updatedLabel = React.useMemo(() => {
@@ -162,13 +146,13 @@ export function NewsHeadlines() {
             {/* Top edge highlight */}
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-300/25 to-transparent" />
 
-            <CardHeader className="px-4 pb-2 pt-3.5">
+            <CardHeader className="px-3 pb-2 pt-3 sm:px-4 sm:pt-3.5">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <div className="flex h-6 w-6 items-center justify-center rounded-md border border-white/[0.05] bg-white/[0.02]">
                             <Newspaper className="h-3 w-3 text-zinc-500" />
                         </div>
-                        <span className="text-[13px] font-semibold tracking-tight text-zinc-200">
+                        <span className="text-[12px] font-semibold tracking-tight text-zinc-200 sm:text-[13px]">
                             Headlines
                         </span>
                     </div>
@@ -197,7 +181,7 @@ export function NewsHeadlines() {
                 ) : null}
             </CardHeader>
 
-            <CardContent className="px-4 pb-3.5 pt-0">
+            <CardContent className="px-3 pb-3 pt-0 sm:px-4 sm:pb-3.5">
                 <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
                     {FILTERS.map((f) => (
                         <button
@@ -205,7 +189,7 @@ export function NewsHeadlines() {
                             type="button"
                             onClick={() => setActiveFilter(f)}
                             className={cn(
-                                "rounded-full border px-2 py-0.5 text-[8px] font-semibold tracking-[0.12em] transition-all duration-200",
+                                "rounded-full border px-2 py-0.5 text-[7px] font-semibold tracking-[0.12em] transition-all duration-200 sm:text-[8px]",
                                 activeFilter === f
                                     ? "border-indigo-400/35 bg-indigo-500/[0.12] text-indigo-200"
                                     : "border-white/[0.08] bg-white/[0.02] text-zinc-500 hover:border-white/[0.14] hover:text-zinc-300",
@@ -218,7 +202,7 @@ export function NewsHeadlines() {
                         type="button"
                         onClick={() => setHighImpactOnly((v) => !v)}
                         className={cn(
-                            "ml-auto rounded-full border px-2 py-0.5 text-[8px] font-semibold tracking-[0.12em] transition-all duration-200",
+                            "ml-auto rounded-full border px-2 py-0.5 text-[7px] font-semibold tracking-[0.12em] transition-all duration-200 sm:text-[8px]",
                             highImpactOnly
                                 ? "border-amber-400/35 bg-amber-500/[0.14] text-amber-200"
                                 : "border-white/[0.08] bg-white/[0.02] text-zinc-500 hover:border-white/[0.14] hover:text-zinc-300",
@@ -241,7 +225,7 @@ export function NewsHeadlines() {
                 ) : null}
 
                 <div className="space-y-px">
-                    {filteredHeadlines.slice(0, 6).map((h: Headline, i: number) => (
+                    {filteredHeadlines.slice(0, showAll ? 10 : 4).map((h: Headline, i: number) => (
                         <a
                             key={`${h.publishedAt}-${i}`}
                             href={h.url}
@@ -292,6 +276,16 @@ export function NewsHeadlines() {
                         </a>
                     ))}
                 </div>
+
+                {filteredHeadlines.length > 4 ? (
+                    <button
+                        type="button"
+                        onClick={() => setShowAll((v) => !v)}
+                        className="mt-2 w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-2.5 py-1.5 text-[10px] font-medium tracking-wide text-zinc-400 transition-all hover:border-white/[0.14] hover:text-zinc-200"
+                    >
+                        {showAll ? "Show less" : `Show more (${filteredHeadlines.length - 4})`}
+                    </button>
+                ) : null}
 
                 {isLoading ? (
                     <div className="space-y-1.5 pt-1">
