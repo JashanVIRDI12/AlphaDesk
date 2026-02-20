@@ -24,7 +24,7 @@ export default function Dashboard() {
                 <DashboardHeader />
 
                 <main className="mx-auto w-full max-w-[1400px] px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8">
-                    <div className="sticky top-[76px] z-30 -mx-1 mb-3 flex gap-2 overflow-x-auto px-1 pb-1 pt-0.5 lg:hidden">
+                    <div className="-mx-1 mb-3 flex gap-2 overflow-x-auto px-1 pb-1 pt-0.5 lg:hidden">
                         <a
                             href="#instruments"
                             className="shrink-0 rounded-full border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[10px] font-semibold tracking-[0.1em] text-zinc-300"
