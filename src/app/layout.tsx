@@ -92,14 +92,14 @@ export default function RootLayout({
       <head>
         <Script
           async
-          src="https://www.googletagmanager.com/gtag/js?id=G-9R8G49R4YX"
+          src="https://www.googletagmanager.com/gtag/js?id=G-0RKN1FKFV5"
           strategy="afterInteractive"
         />
         <Script id="gtag-init" strategy="afterInteractive">
           {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', 'G-9R8G49R4YX');`}
+gtag('config', 'G-0RKN1FKFV5');`}
         </Script>
       </head>
       <body
