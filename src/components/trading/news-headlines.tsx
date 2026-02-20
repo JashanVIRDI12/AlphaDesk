@@ -9,10 +9,65 @@ import { useNews } from "@/hooks/use-dashboard-data";
 type Headline = {
     title: string;
     source: string;
+    topic?: string;
     url: string;
     publishedAt: string;
     ago: string;
 };
+
+type NewsFilter = "ALL" | "USD" | "JPY" | "GBP" | "FED";
+
+const FILTERS: NewsFilter[] = ["ALL", "USD", "JPY", "GBP", "FED"];
+const HIGH_IMPACT_TERMS = [
+    "cpi",
+    "inflation",
+    "nfp",
+    "nonfarm",
+    "fomc",
+    "federal reserve",
+    "fed",
+    "boj",
+    "bank of japan",
+    "boe",
+    "bank of england",
+    "ecb",
+    "interest rate",
+    "rate decision",
+    "intervention",
+    "payroll",
+    "gdp",
+    "pmi",
+];
+
+function isFedHeadline(h: Headline): boolean {
+    const title = h.title.toLowerCase();
+    return (
+        h.topic === "USD" ||
+        title.includes("federal reserve") ||
+        title.includes("fed") ||
+        title.includes("fomc")
+    );
+}
+
+function isHighImpactHeadline(h: Headline): boolean {
+    const title = h.title.toLowerCase();
+    return HIGH_IMPACT_TERMS.some((term) => title.includes(term));
+}
+
+function relevanceScore(h: Headline): number {
+    const title = h.title.toLowerCase();
+    let score = 0;
+
+    if (isHighImpactHeadline(h)) score += 40;
+    if (h.topic === "USD" || h.topic === "GBP" || h.topic === "JPY") score += 10;
+    if (title.includes("usd") || title.includes("dollar")) score += 8;
+    if (title.includes("jpy") || title.includes("yen")) score += 8;
+    if (title.includes("gbp") || title.includes("pound") || title.includes("sterling")) score += 8;
+    if (title.includes("eur") || title.includes("euro")) score += 6;
+    if (title.includes("risk") || title.includes("yield")) score += 4;
+
+    return score;
+}
 
 const SOURCE_COLORS: Record<string, string> = {
     USD: "text-sky-400/90",
@@ -26,6 +81,65 @@ const SOURCE_COLORS: Record<string, string> = {
 export function NewsHeadlines() {
     const { data, isLoading, error } = useNews();
     const [, forceTick] = React.useState(0);
+    const [activeFilter, setActiveFilter] = React.useState<NewsFilter>("ALL");
+    const [highImpactOnly, setHighImpactOnly] = React.useState(false);
+
+    React.useEffect(() => {
+        try {
+            const storedFilter = window.localStorage.getItem("news-filter") as NewsFilter | null;
+            if (storedFilter && FILTERS.includes(storedFilter)) {
+                setActiveFilter(storedFilter);
+            }
+            setHighImpactOnly(window.localStorage.getItem("news-high-impact") === "1");
+        } catch {
+            // ignore localStorage issues
+        }
+    }, []);
+
+    React.useEffect(() => {
+        try {
+            window.localStorage.setItem("news-filter", activeFilter);
+        } catch {
+            // ignore localStorage issues
+        }
+    }, [activeFilter]);
+
+    React.useEffect(() => {
+        try {
+            window.localStorage.setItem("news-high-impact", highImpactOnly ? "1" : "0");
+        } catch {
+            // ignore localStorage issues
+        }
+    }, [highImpactOnly]);
+
+    const filterCounts = React.useMemo(() => {
+        const headlines = data?.headlines ?? [];
+        return {
+            ALL: headlines.length,
+            USD: headlines.filter((h: Headline) => h.topic === "USD").length,
+            JPY: headlines.filter((h: Headline) => h.topic === "JPY").length,
+            GBP: headlines.filter((h: Headline) => h.topic === "GBP").length,
+            FED: headlines.filter((h: Headline) => isFedHeadline(h)).length,
+        } as Record<NewsFilter, number>;
+    }, [data?.headlines]);
+
+    const filteredHeadlines = React.useMemo(() => {
+        const headlines = [...(data?.headlines ?? [])];
+        const byFilter =
+            activeFilter === "ALL"
+                ? headlines
+                : activeFilter === "FED"
+                    ? headlines.filter((h: Headline) => isFedHeadline(h))
+                    : headlines.filter((h: Headline) => h.topic === activeFilter);
+
+        const byImpact = highImpactOnly ? byFilter.filter((h: Headline) => isHighImpactHeadline(h)) : byFilter;
+
+        return byImpact.sort((a, b) => {
+            const scoreDiff = relevanceScore(b) - relevanceScore(a);
+            if (scoreDiff !== 0) return scoreDiff;
+            return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+        });
+    }, [data?.headlines, activeFilter, highImpactOnly]);
 
     const updatedLabel = React.useMemo(() => {
         if (!data?.generatedAt) return null;
@@ -84,20 +198,50 @@ export function NewsHeadlines() {
             </CardHeader>
 
             <CardContent className="px-4 pb-3.5 pt-0">
+                <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
+                    {FILTERS.map((f) => (
+                        <button
+                            key={f}
+                            type="button"
+                            onClick={() => setActiveFilter(f)}
+                            className={cn(
+                                "rounded-full border px-2 py-0.5 text-[8px] font-semibold tracking-[0.12em] transition-all duration-200",
+                                activeFilter === f
+                                    ? "border-indigo-400/35 bg-indigo-500/[0.12] text-indigo-200"
+                                    : "border-white/[0.08] bg-white/[0.02] text-zinc-500 hover:border-white/[0.14] hover:text-zinc-300",
+                            )}
+                        >
+                            {f} ({filterCounts[f] ?? 0})
+                        </button>
+                    ))}
+                    <button
+                        type="button"
+                        onClick={() => setHighImpactOnly((v) => !v)}
+                        className={cn(
+                            "ml-auto rounded-full border px-2 py-0.5 text-[8px] font-semibold tracking-[0.12em] transition-all duration-200",
+                            highImpactOnly
+                                ? "border-amber-400/35 bg-amber-500/[0.14] text-amber-200"
+                                : "border-white/[0.08] bg-white/[0.02] text-zinc-500 hover:border-white/[0.14] hover:text-zinc-300",
+                        )}
+                    >
+                        HIGH IMPACT
+                    </button>
+                </div>
+
                 {error && !isLoading ? (
                     <div className="rounded-lg border border-white/[0.04] bg-white/[0.015] px-3 py-2 text-[10px] text-zinc-600">
                         News unavailable
                     </div>
                 ) : null}
 
-                {!isLoading && (!data?.headlines || data.headlines.length === 0) && !error ? (
+                {!isLoading && filteredHeadlines.length === 0 && !error ? (
                     <div className="rounded-lg border border-white/[0.04] bg-white/[0.015] px-3 py-2 text-[10px] text-zinc-600">
                         No headlines available
                     </div>
                 ) : null}
 
                 <div className="space-y-px">
-                    {data?.headlines.slice(0, 6).map((h: Headline, i: number) => (
+                    {filteredHeadlines.slice(0, 6).map((h: Headline, i: number) => (
                         <a
                             key={`${h.publishedAt}-${i}`}
                             href={h.url}
@@ -130,11 +274,16 @@ export function NewsHeadlines() {
                                     <span
                                         className={cn(
                                             "font-semibold tracking-wide",
-                                            SOURCE_COLORS[h.source] ?? "text-zinc-500",
+                                            SOURCE_COLORS[h.topic ?? h.source] ?? "text-zinc-500",
                                         )}
                                     >
-                                        {h.source}
+                                        {h.topic ?? h.source}
                                     </span>
+                                    {isHighImpactHeadline(h) ? (
+                                        <span className="rounded-full border border-amber-400/25 bg-amber-500/[0.12] px-1.5 py-[1px] text-[7px] font-semibold tracking-[0.12em] text-amber-200">
+                                            HIGH
+                                        </span>
+                                    ) : null}
                                     <span className="text-zinc-700">·</span>
                                     <span className="text-zinc-600">{h.ago}</span>
                                 </div>

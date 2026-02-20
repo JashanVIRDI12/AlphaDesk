@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 type Headline = {
     title: string;
     source: string;
+    topic: string;
     url: string;
     publishedAt: string;   // ISO string
     ago: string;           // e.g. "12m", "3h"
@@ -50,6 +51,8 @@ const FEEDS = [
 let cache: { fetchedAt: number; headlines: Headline[] } | undefined;
 let inflight: Promise<Headline[]> | undefined;
 const CACHE_TTL = 1 * 60 * 1000; // 1 minute
+const MAX_PER_TOPIC = 5;
+const DASHBOARD_HEADLINES_LIMIT = 10;
 
 const CACHE_HEADERS = {
     "Cache-Control": "private, max-age=0, s-maxage=60, stale-while-revalidate=300",
@@ -133,6 +136,7 @@ async function fetchFeed(feedUrl: string, feedSource: string): Promise<Headline[
             items.push({
                 title,
                 source,
+                topic: feedSource,
                 url: link,
                 publishedAt: new Date(pubDate).toISOString(),
                 ago: timeAgo(new Date(pubDate).toISOString()),
@@ -198,8 +202,19 @@ export async function GET() {
             new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
     );
 
-        // Keep top 8
-        const headlines = unique.slice(0, 12);
+    // Balance by topic first (max 5 per topic), then keep top 10 overall
+    const topicCounts = new Map<string, number>();
+    const balanced: Headline[] = [];
+
+    for (const h of unique) {
+        const topic = h.topic || "FX";
+        const count = topicCounts.get(topic) ?? 0;
+        if (count >= MAX_PER_TOPIC) continue;
+        topicCounts.set(topic, count + 1);
+        balanced.push(h);
+    }
+
+        const headlines = balanced.slice(0, DASHBOARD_HEADLINES_LIMIT);
 
     // Refresh ago values
     for (const h of headlines) {
