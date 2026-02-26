@@ -248,12 +248,12 @@ export function MacroPanel({
           </div>
 
           {/* MIDDLE: CALENDAR DESK */}
-          <div className="lg:col-span-4 flex flex-col relative z-10 sm:border-t lg:border-t-0 border-white/[0.04]">
+          <div className="lg:col-span-4 flex flex-col relative z-10">
             <CalendarDesk riskMode={riskMode} events={events} />
           </div>
 
           {/* RIGHT: NEWS FEED */}
-          <div className="lg:col-span-4 flex flex-col p-4 sm:p-6 bg-[#0c0c0e] relative z-10 border-t lg:border-t-0 lg:border-l border-white/[0.04]">
+          <div className="lg:col-span-4 flex flex-col p-4 sm:p-6 bg-[#0c0c0e] relative z-10">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="flex h-6 w-6 items-center justify-center rounded-md border border-white/[0.08] bg-white/[0.04]">

@@ -469,7 +469,7 @@ export function CalendarDesk({
   }, [todayKey, riskMode, overviewText]);
 
   return (
-    <div className="flex h-full flex-col p-4 sm:p-6 bg-black/10 sm:border-y sm:border-l sm:border-r-0 lg:border-white/[0.04]">
+    <div className="flex h-full flex-col p-4 sm:p-6 bg-black/10">
       {/* ── Header ── */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">

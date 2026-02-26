@@ -24,10 +24,10 @@ export function DashboardHeader({ sessions }: { sessions: MarketSession[] }) {
 
   return (
     <header className="sticky top-0 z-30 relative border-b border-white/10 bg-[#0c0c0e] backdrop-blur-2xl">
-      <div className="relative mx-auto w-full max-w-[1800px] 2xl:max-w-[2400px] flex flex-col md:flex-row md:items-center justify-between gap-2 px-4 py-2 md:px-6">
+      <div className="relative mx-auto w-full max-w-[1800px] 2xl:max-w-[2400px] flex flex-wrap items-center justify-between gap-y-3 gap-x-2 px-4 py-3 md:px-6 lg:flex-nowrap">
 
         {/* Left: Branding */}
-        <Link href="/" className="group flex items-center gap-3 w-max">
+        <Link href="/" className="group flex items-center gap-2 sm:gap-3 w-max">
           <div className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.03] transition-all duration-300 group-hover:border-indigo-500/30 group-hover:bg-indigo-500/[0.08]">
             <TrendingUp className="h-4 w-4 text-zinc-400 transition-colors duration-300 group-hover:text-indigo-400" />
           </div>
@@ -45,7 +45,7 @@ export function DashboardHeader({ sessions }: { sessions: MarketSession[] }) {
         </Link>
 
         {/* Middle: Integrated Status Strip */}
-        <div className="flex-1 flex justify-center py-2 md:py-0">
+        <div className="flex-1 flex w-full justify-center order-last pt-3 pb-1 border-t border-white/[0.06] lg:order-none lg:w-auto lg:py-0 lg:border-none">
           <TopStatusStrip sessions={sessions} />
         </div>
 
