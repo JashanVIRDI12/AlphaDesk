@@ -176,40 +176,43 @@ export function TopStatusStrip({ sessions }: { sessions: MarketSession[] }) {
     const Icon = tone === "no_trade" ? AlertTriangle : tone === "caution" ? HelpCircle : TrendingUp;
 
     return (
-        <div className="flex flex-col xl:flex-row xl:items-center justify-center gap-4 xl:gap-8 px-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-start xl:justify-center gap-3 sm:gap-4 xl:gap-8 w-full mt-2 xl:mt-0 overflow-x-auto pb-2 xl:pb-0 scrollbar-hide">
             {/* Left: Signal */}
-            <div className="flex items-center gap-2">
-                <div className={cn("flex items-center justify-center p-1 rounded border", bgAccent)}>
-                    <Icon className="h-3 w-3" />
+            <div className="flex shrink-0 items-center justify-center sm:justify-start gap-2 sm:gap-3 px-1">
+                <div className={cn("flex flex-shrink-0 items-center justify-center p-1.5 xl:p-1 rounded-md xl:rounded border", bgAccent)}>
+                    <Icon className="h-4 w-4 xl:h-3 xl:w-3" />
                 </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                     {signal ? (
                         <>
-                            <span className={cn("text-[10px] font-bold tracking-widest uppercase", tone === "no_trade" ? "text-rose-400" : tone === "caution" ? "text-amber-400" : "text-emerald-400")}>
+                            <span className={cn("text-[11px] sm:text-[12px] xl:text-[10px] font-bold tracking-widest uppercase whitespace-nowrap", tone === "no_trade" ? "text-rose-400" : tone === "caution" ? "text-amber-400" : "text-emerald-400")}>
                                 {signal.title}
                             </span>
-                            <span className="hidden sm:inline-block text-zinc-600">—</span>
-                            <span className="text-[10px] text-zinc-400 truncate max-w-[200px] xl:max-w-none">{signal.reason}</span>
+                            <span className="text-zinc-600">—</span>
+                            <span className="text-[11px] xl:text-[10px] text-zinc-400 leading-snug truncate max-w-[140px] sm:max-w-none">{signal.reason}</span>
                         </>
                     ) : (
-                        <span className="text-[10px] text-zinc-500 animate-pulse">Computing trade signal...</span>
+                        <span className="text-[11px] xl:text-[10px] text-zinc-500 animate-pulse">Computing trade signal...</span>
                     )}
                 </div>
             </div>
 
+            {/* Divider on desktop */}
+            <div className="hidden sm:block w-px h-6 bg-white/10 shrink-0" />
+
             {/* Right: Sessions */}
-            <div className="flex flex-wrap items-center gap-3 sm:gap-5 border-t border-white/[0.06] pt-2 xl:border-none xl:pt-0">
+            <div className="flex shrink-0 items-center justify-between sm:justify-start gap-3 sm:gap-5 bg-white/[0.03] sm:bg-transparent border border-white/[0.05] sm:border-none rounded-xl sm:rounded-none px-3 py-2 sm:p-0">
                 {computedSessions.map(s => {
                     const isActive = s.status === "Open";
                     return (
-                        <div key={s.name} className="flex items-center gap-1.5">
+                        <div key={s.name} className="flex items-center gap-1.5 text-left shrink-0">
                             <div className="flex flex-col">
-                                <span className="text-[8px] font-bold tracking-widest text-zinc-500 uppercase">{s.name}</span>
-                                <span className={cn("text-[11px] font-mono font-medium", isActive ? "text-white" : "text-zinc-500")}>
+                                <span className="text-[9px] xl:text-[8px] font-bold tracking-widest text-zinc-500 uppercase">{s.name}</span>
+                                <span className={cn("text-[12px] xl:text-[11px] font-mono font-medium mt-0.5 sm:mt-0", isActive ? "text-white" : "text-zinc-500")}>
                                     {s.localTime}
                                 </span>
                             </div>
-                            <div className={cn("h-1 w-1 rounded-full ml-0.5", isActive ? "bg-emerald-400 animate-pulse shadow-[0_0_5px_rgba(52,211,153,0.5)]" : "bg-zinc-800")} />
+                            <div className={cn("h-1.5 w-1.5 xl:h-1 xl:w-1 rounded-full mt-1 sm:mt-0 sm:ml-0.5", isActive ? "bg-emerald-400 animate-pulse shadow-[0_0_5px_rgba(52,211,153,0.5)]" : "bg-zinc-800")} />
                         </div>
                     );
                 })}
