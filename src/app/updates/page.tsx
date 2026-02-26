@@ -18,6 +18,24 @@ type UpdateItem = {
 
 const UPDATES: UpdateItem[] = [
   {
+    date: "2026-02-27",
+    title: "AlphaDesk PRO: Institutional Upgrade",
+    improved: [
+      "Upgraded the main layout to an expansive max-w-[1800px] edge-to-edge template for larger screens.",
+      "Integrated Global Risk Bias and Market Session clocks directly into the top navigation bar to save vertical space.",
+      "Rebuilt the Macro Desk into a unified deep-glass interface, unifying the layout and removing disjointed card borders.",
+      "Condensed the global economic overview (FX, RATE, CPI, GDP) into a single high-density table for rapid multi-currency comparisons.",
+      "Upgraded the Live News feed to dynamically adapt its height to its content, rather than arbitrarily restricting scrolling.",
+      "Upgraded the Calendar engine to parse, track, and color-code both High and Medium-impact news releases for a more comprehensive pulse.",
+      "Added a new 'Co-Pilot Check-in' to the dashboard greeting that rotates through daily psychological trading discipline tips.",
+      "Significantly upgraded the AI Analysis engine structure to generate sharper, faster, and more analytically robust macro 'Scenarios' summaries.",
+    ],
+    removed: [
+      "Removed the rigid Market Overview banner and merged its logic cleanly into the top header.",
+      "Removed the 'Show More' buttons from the Live News feed in favor of an organic flow.",
+    ],
+  },
+  {
     date: "2026-02-20",
     title: "Dashboard UX compact pass",
     improved: [

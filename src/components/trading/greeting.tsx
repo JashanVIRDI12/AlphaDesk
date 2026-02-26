@@ -25,25 +25,36 @@ const SESSION_SPECS: Record<MarketSession["name"], SessionSpec> = {
 const GREETING_VARIANTS: Record<TimeGreetingKey, string[]> = {
   morning: [
     "Good morning",
-    "Fresh session ahead",
-    "Morning check-in",
+    "Rise and shine",
+    "Let's catch some early alpha",
   ],
   afternoon: [
     "Good afternoon",
-    "Mid-session focus",
-    "Stay selective",
+    "Hope your session is going well",
+    "Stay sharp out there",
   ],
   evening: [
     "Good evening",
     "Prime volatility window",
-    "Evening desk update",
+    "Here's your evening update",
   ],
   late: [
+    "Late night grinding?",
     "Welcome back",
     "Quiet hours, sharp setups",
-    "Late-session discipline",
   ],
 };
+
+const TRADING_TIPS = [
+  "Remember: Capital preservation is rule number one. Don't force a setup that isn't there.",
+  "You're doing great. Stick to your risk management plan, no matter what the market throws at you.",
+  "Patience pays. It's perfectly fine to sit on your hands if the price action is choppy.",
+  "One good trade is all it takes. Wait patiently for your perfect pitch.",
+  "Trust your edge. Don't let a single losing trade make you doubt your overall strategy.",
+  "Take a deep breath. Emotional trading is the quickest way to drawdowns.",
+  "Your biggest competitor is you from yesterday. Keep improving bit by bit.",
+  "A 'no trade' day is still a profitable day if it saved you from a loss.",
+];
 
 function parseHHMM(value: string) {
   const [h, m] = value.split(":").map((n) => Number(n));
@@ -152,35 +163,45 @@ export function Greeting({
         ? "border-amber-500/20 bg-amber-500/[0.08] text-amber-300"
         : "border-white/10 bg-white/[0.04] text-zinc-300";
 
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-indigo-500/[0.08] via-purple-500/[0.04] to-transparent p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_22px_70px_rgba(0,0,0,0.45)] md:p-5">
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-indigo-500/[0.06] via-purple-500/[0.04] to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-300/20 to-transparent" />
+  const tipIndex = getDayOfYear(now) % TRADING_TIPS.length;
+  const friendlyTip = TRADING_TIPS[tipIndex];
 
-      <div className="relative space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className={cn("inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]", statusTone)}>
-            {statusLabel}
-          </span>
-          <span className="text-[10px] tracking-wide text-zinc-500">
-            {mounted
-              ? now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-              : "--:--:--"}
-          </span>
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-[#0c0c0e] to-[#121214] p-5 md:p-8 shadow-2xl">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.06),transparent_50%)]" />
+
+      <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="space-y-4 max-w-2xl">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className={cn("inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em]", statusTone)}>
+              {statusLabel}
+            </span>
+            <span className="text-[11px] font-medium tracking-wide text-zinc-500">
+              {mounted
+                ? now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+                : "--:--"}
+            </span>
+          </div>
+
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-white md:text-[36px] md:leading-[42px] mb-2">
+              {mounted ? personalGreeting : title}!
+            </h1>
+            <p className="text-[14px] leading-relaxed text-zinc-400">
+              {subtitle} I've prepared your command center below—let's make today a good one.
+            </p>
+          </div>
         </div>
 
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-100 md:text-[34px] md:leading-[38px]">
-          {mounted ? personalGreeting : title}
-        </h1>
-
-        {subtitle && (
-          <p className="max-w-2xl text-[13px] leading-5 text-zinc-400 md:text-[15px] md:leading-6">
-            {subtitle}
-          </p>
-        )}
-
-        <div className="text-[11px] font-medium tracking-wide text-zinc-500">
-          Scroll down for dedicated analysis ↓
+        {/* The "Best Friend" Co-pilot Message */}
+        <div className="max-w-[320px] rounded-xl border border-indigo-500/10 bg-indigo-500/[0.03] p-4 flex items-start gap-3 relative shrink-0">
+          <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-indigo-400 animate-pulse" />
+          <div className="space-y-1.5">
+            <h4 className="text-[10px] font-bold uppercase tracking-[0.15em] text-indigo-400">Your Co-Pilot Check-in</h4>
+            <p className="text-[12px] leading-relaxed text-zinc-300 italic">
+              "{friendlyTip}"
+            </p>
+          </div>
         </div>
       </div>
     </div>

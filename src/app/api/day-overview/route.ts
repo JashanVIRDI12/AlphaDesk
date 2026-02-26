@@ -47,7 +47,10 @@ function buildCacheKey(body: Body, model: string) {
 }
 
 function isOverviewComplete(text: string) {
-  const t = text.trim();
+  // CoT might give us <thought_process>...</thought_process>
+  let t = text.trim();
+  t = t.replace(/<thought_process>[\s\S]*?<\/thought_process>/g, "").trim();
+
   if (!t) return false;
   const required = [
     "DATE:",
@@ -61,6 +64,10 @@ function isOverviewComplete(text: string) {
   if (/\b(a|an|the|and|or|to|of)\s*$/.test(t.toLowerCase())) return false;
 
   return true;
+}
+
+function stripThoughts(text: string) {
+  return text.replace(/<thought_process>[\s\S]*?<\/thought_process>/g, "").trim();
 }
 
 function sanitizeOpenRouterError(status: number, rawText: string) {
@@ -111,7 +118,7 @@ function buildLocalOverview(body: Body) {
 
 export async function POST(req: Request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || "openai/gpt-5-mini";
+  const model = process.env.OPENROUTER_MODEL || "google/gemini-2.5-flash";
   const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
   if (!apiKey) {
@@ -162,7 +169,7 @@ export async function POST(req: Request) {
   if (!hasEvents && hasHolidays) {
     // No high-impact events but there are bank holidays
     prompt =
-      `Create a complete, non-truncated FX trading day brief for a quiet holiday day.\n` +
+      `Create a complete, highly professional FX trading day brief for a quiet holiday day.\n` +
       `Date: ${body.date}\n` +
       `Risk mode: ${body.riskMode}\n` +
       holidayCtx +
@@ -175,11 +182,11 @@ export async function POST(req: Request) {
       `- Base: <1 sentence about expected quiet session>.\n` +
       `- Upside surprise: <1 sentence about what could cause unexpected moves>.\n` +
       `- Downside surprise: <1 sentence about thin-liquidity risk>.\n` +
-      `Do not add any other sections. Do not cut off mid-sentence.`;
+      `Always start with <thought_process> where you think step-by-step about what the true institutional reaction would be. Then output the STRICT FORMAT. Do not cut off mid-sentence.`;
   } else {
     // Normal day with events (may also have holidays)
     prompt =
-      `Create a complete, non-truncated FX trading day brief.\n` +
+      `Create a highly analytical, hedge-fund grade FX trading day brief.\n` +
       `Date: ${body.date}\n` +
       `Risk mode: ${body.riskMode}\n` +
       holidayCtx +
@@ -194,12 +201,12 @@ export async function POST(req: Request) {
       `\n\nSTRICT FORMAT (must follow):\n` +
       `DATE: <same date> | RISK: <same risk mode>\n` +
       `OVERVIEW:\n` +
-      `- (exactly 3 bullets, each one sentence, end with a period)\n` +
+      `- (exactly 3 bullets, each one sentence, end with a period. Focus on institutional order flow, true catalysts, and cross-asset readthroughs.)\n` +
       `SCENARIOS:\n` +
-      `- Base: <1 sentence>.\n` +
-      `- Upside surprise: <1 sentence>.\n` +
-      `- Downside surprise: <1 sentence>.\n` +
-      `Do not add any other sections. Do not cut off mid-sentence.`;
+      `- Base: <1 sentence on the most probable outcome>.\n` +
+      `- Upside surprise: <1 sentence on USD reaction to a hot print>.\n` +
+      `- Downside surprise: <1 sentence on USD reaction to a cool print>.\n` +
+      `Always start with <thought_process> where you think step-by-step about what the true institutional reaction, volatility footprint, and correlations would be today. Then output the STRICT FORMAT below it. Keep the final format concise but deeply insightful.`;
   }
 
   const payloadBase = {
@@ -208,7 +215,7 @@ export async function POST(req: Request) {
       {
         role: "system" as const,
         content:
-          "You are an experienced FX macro strategist. Write concise, complete trading briefs. Never output partial sentences.",
+          "You are a Senior FX Macro Strategist at a tier-1 hedge fund. Speak in institutional trading terms, concise and impactful. Write complete trading briefs without truncating sentences.",
       },
       {
         role: "user" as const,
@@ -256,8 +263,8 @@ export async function POST(req: Request) {
   }
 
   inflight = (async () => {
-    let overview = await callOpenRouter(payloadBase.messages, 700);
-    if (!overview) overview = await callOpenRouter(payloadBase.messages, 950);
+    let overview = await callOpenRouter(payloadBase.messages, 1500);
+    if (!overview) overview = await callOpenRouter(payloadBase.messages, 2000);
 
     if (!overview) {
       throw new Error("openrouter_empty_response");
@@ -265,7 +272,7 @@ export async function POST(req: Request) {
 
     if (!isOverviewComplete(overview)) {
       const rewritePrompt =
-        "Rewrite the SAME brief strictly shorter. Keep DATE, OVERVIEW, and SCENARIOS only, and finish every sentence. Do NOT add anything else.";
+        "Rewrite the SAME brief strictly shorter. Finish every sentence. ALWAYS start with <thought_process> and then only output DATE, OVERVIEW, and SCENARIOS.";
       const messages = [
         ...payloadBase.messages,
         { role: "assistant" as const, content: overview },
@@ -290,6 +297,9 @@ export async function POST(req: Request) {
     if (!isOverviewComplete(overview)) {
       throw new Error("openrouter_incomplete_response");
     }
+
+    // Clean out the CoT thoughts for the UI
+    overview = stripThoughts(overview);
 
     overviewCache = {
       key: cacheKey,

@@ -14,7 +14,11 @@ export function AuthControls() {
   const [signInOpen, setSignInOpen] = React.useState(false);
 
   const handleSignOut = async () => {
-    await signOut({ redirect: false });
+    if (typeof window !== "undefined") {
+      localStorage.clear();
+      sessionStorage.clear();
+    }
+    await signOut({ callbackUrl: "/" });
   };
 
   if (status === "loading") {
@@ -37,6 +41,7 @@ export function AuthControls() {
               variant="ghost"
               size="icon"
               className="h-9 w-9 rounded-full transition-colors hover:bg-white/[0.06]"
+              type="button"
               onClick={handleSignOut}
             >
               <LogOut className="h-4 w-4" />
@@ -63,6 +68,7 @@ export function AuthControls() {
       )}
 
       <SignInModal open={signInOpen} onOpenChange={setSignInOpen} />
+
     </>
   );
 }

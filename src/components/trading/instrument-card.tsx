@@ -371,6 +371,7 @@ function InstrumentDetailModal({
   onClose: () => void;
 }) {
   const isBullish = instrument.bias === "Bullish";
+  const isBearish = instrument.bias === "Bearish";
   const chartLink = TV_CHART_LINKS[instrument.symbol] ?? "#";
   const [sharing, setSharing] = React.useState(false);
   const [shareNote, setShareNote] = React.useState<string | null>(null);
@@ -470,13 +471,13 @@ function InstrumentDetailModal({
         className="relative w-full max-w-lg animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative max-h-[calc(100vh-2rem)] overflow-hidden rounded-2xl border border-white/[0.08] bg-zinc-900/95 shadow-2xl shadow-black/50">
+        <div className="relative max-h-[calc(100vh-2rem)] overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0c0c0e] shadow-2xl shadow-black/80">
           {/* Top glow */}
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent" />
           <div
             className={cn(
-              "pointer-events-none absolute -top-20 left-1/2 h-40 w-80 -translate-x-1/2 rounded-full blur-3xl",
-              isBullish ? "bg-emerald-500/8" : "bg-rose-500/8",
+              "pointer-events-none absolute -top-20 left-1/2 h-40 w-80 -translate-x-1/2 rounded-full blur-[80px]",
+              isBullish ? "bg-emerald-500/10" : isBearish ? "bg-rose-500/10" : "bg-zinc-500/10",
             )}
           />
 
@@ -488,20 +489,24 @@ function InstrumentDetailModal({
                   "flex h-12 w-12 items-center justify-center rounded-xl border",
                   isBullish
                     ? "border-emerald-500/20 bg-emerald-500/[0.08]"
-                    : "border-rose-500/20 bg-rose-500/[0.08]",
+                    : isBearish
+                      ? "border-rose-500/20 bg-rose-500/[0.08]"
+                      : "border-zinc-500/20 bg-zinc-500/[0.08]",
                 )}
               >
                 {isBullish ? (
                   <TrendingUp className="h-5 w-5 text-emerald-400" />
-                ) : (
+                ) : isBearish ? (
                   <TrendingDown className="h-5 w-5 text-rose-400" />
+                ) : (
+                  <TrendingUp className="h-5 w-5 text-zinc-400" />
                 )}
               </div>
               <div>
-                <div className="text-[11px] font-medium tracking-wider text-zinc-500">
+                <div className="text-[11px] font-bold tracking-widest uppercase text-zinc-500 mb-0.5">
                   {instrument.displayName}
                 </div>
-                <div className="text-xl font-bold tracking-tight text-zinc-100">
+                <div className="text-2xl font-bold tracking-tight text-white leading-none">
                   {instrument.symbol}
                 </div>
               </div>
@@ -511,19 +516,21 @@ function InstrumentDetailModal({
               {/* Bias pill */}
               <div
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full border px-3 py-1.5",
+                  "flex items-center gap-1.5 rounded-md border px-3 py-1.5",
                   isBullish
                     ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-                    : "border-rose-500/20 bg-rose-500/10 text-rose-300",
+                    : isBearish
+                      ? "border-rose-500/20 bg-rose-500/10 text-rose-300"
+                      : "border-zinc-500/20 bg-zinc-500/10 text-zinc-300",
                 )}
               >
                 {isBullish ? (
                   <ArrowUpRight className="h-3.5 w-3.5" />
-                ) : (
+                ) : isBearish ? (
                   <ArrowDownRight className="h-3.5 w-3.5" />
-                )}
-                <span className="text-[11px] font-semibold tracking-wider">
-                  {instrument.bias.toUpperCase()}
+                ) : null}
+                <span className="text-[11px] font-bold tracking-widest uppercase">
+                  {instrument.bias}
                 </span>
               </div>
               <button
@@ -637,13 +644,18 @@ export function InstrumentCard({
   generatedAt?: string;
 }) {
   const [showDetail, setShowDetail] = React.useState(false);
-  const [showQuickDrivers, setShowQuickDrivers] = React.useState(false);
   const isBullish = instrument.bias === "Bullish";
+  const isBearish = instrument.bias === "Bearish";
+
   const drivers = [
     { label: "NEWS", value: compactText(instrument.newsDriver) },
     { label: "TECH", value: compactText(instrument.technicalLevels) },
     { label: "MACRO", value: compactText(instrument.macroBackdrop) },
   ].filter((d) => d.value).slice(0, 3);
+
+  const glowAccent = isBullish ? "bg-emerald-500/10" : isBearish ? "bg-rose-500/10" : "bg-zinc-500/10";
+  const stripAccent = isBullish ? "from-emerald-500/80 to-emerald-500/10" : isBearish ? "from-rose-500/80 to-rose-500/10" : "from-zinc-500/80 to-zinc-500/10";
+  const badgeAccent = isBullish ? "text-emerald-300 border-emerald-500/20 bg-emerald-500/10" : isBearish ? "text-rose-300 border-rose-500/20 bg-rose-500/10" : "text-zinc-300 border-zinc-500/20 bg-zinc-500/10";
 
   return (
     <>
@@ -657,143 +669,72 @@ export function InstrumentCard({
             setShowDetail(true);
           }
         }}
-        className="block w-full cursor-pointer rounded-xl text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+        className="block w-full cursor-pointer rounded-2xl text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 ring-offset-zinc-950"
       >
-        <Card className="group relative overflow-hidden border-white/[0.08] bg-gradient-to-b from-indigo-500/[0.08] via-purple-500/[0.04] to-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_18px_66px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-0.5 hover:border-indigo-300/25 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_24px_80px_rgba(0,0,0,0.6)] cursor-pointer">
-          {/* Edge highlights */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-300/25 to-transparent" />
+        <Card className="group relative overflow-hidden border-white/[0.06] bg-[#0c0c0e] shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:border-white/[0.12] hover:shadow-[0_24px_80px_rgba(0,0,0,0.8)] cursor-pointer">
+          {/* Subtle glow */}
+          <div className={cn("pointer-events-none absolute -bottom-16 left-1/2 h-40 w-full -translate-x-1/2 rounded-full blur-[80px] transition-opacity duration-300 opacity-50 group-hover:opacity-100", glowAccent)} />
 
           {/* Bias-colored side strip */}
-          <div
-            className={cn(
-              "pointer-events-none absolute left-0 top-3 bottom-3 w-[2px] rounded-full transition-all duration-300",
-              isBullish
-                ? "bg-gradient-to-b from-emerald-400/60 to-emerald-400/10"
-                : "bg-gradient-to-b from-rose-400/60 to-rose-400/10",
-            )}
-          />
+          <div className={cn("pointer-events-none absolute left-0 top-3 bottom-3 w-[3px] rounded-r-lg opacity-80", stripAccent)} />
 
-          {/* Subtle glow */}
-          <div
-            className={cn(
-              "pointer-events-none absolute -bottom-16 left-1/2 h-28 w-[18rem] -translate-x-1/2 rounded-full blur-3xl transition-opacity duration-300 opacity-40 group-hover:opacity-60",
-              isBullish ? "bg-emerald-500/8" : "bg-rose-500/8",
-            )}
-          />
-
-          <CardHeader className="pb-1 pl-5">
+          <CardHeader className="pb-3 pt-4 pl-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="text-[10px] font-medium uppercase tracking-[0.1em] text-zinc-500">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-0.5">
                   {instrument.displayName}
                 </div>
-                <div className="text-[17px] font-bold tracking-tight text-zinc-100">
+                <div className="text-[19px] font-bold tracking-tight text-zinc-100 mb-1.5">
                   {instrument.symbol}
+                </div>
+                <div className={cn("inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5", badgeAccent)}>
+                  {isBullish ? <ArrowUpRight className="h-3 w-3" /> : isBearish ? <ArrowDownRight className="h-3 w-3" /> : null}
+                  <span className="text-[9px] font-bold uppercase tracking-widest">
+                    {instrument.bias}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2.5">
-                {/* Bias badge */}
-                <div
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-full border px-2.5 py-1",
-                    isBullish
-                      ? "border-emerald-500/15 bg-emerald-500/[0.06]"
-                      : "border-rose-500/15 bg-rose-500/[0.06]",
-                  )}
-                >
-                  {isBullish ? (
-                    <ArrowUpRight className="h-3 w-3 text-emerald-400" />
-                  ) : (
-                    <ArrowDownRight className="h-3 w-3 text-rose-400" />
-                  )}
-                  <span
-                    className={cn(
-                      "text-[10px] font-semibold tracking-wider",
-                      isBullish ? "text-emerald-300" : "text-rose-300",
-                    )}
-                  >
-                    {instrument.bias.toUpperCase()}
-                  </span>
-                </div>
-
-                {/* Confidence gauge */}
+              <div className="flex flex-col items-end gap-1.5">
+                <span className="text-[9px] font-semibold uppercase tracking-widest text-zinc-500">Conviction</span>
                 <ConfidenceGauge value={instrument.confidence} size={42} />
               </div>
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-3 pl-5 pt-0">
+          <CardContent className="space-y-4 pl-5 pt-0 pb-4">
             {/* TradingView Mini Chart */}
-            <div className="relative -mx-1 overflow-hidden rounded-lg border border-white/[0.04] bg-black/30">
+            <div className="relative -mx-1 overflow-hidden rounded-xl border border-white/[0.04] bg-black/40 h-[140px]">
               <MiniChart
                 symbol={instrument.symbol}
                 tone={isBullish ? "up" : "down"}
               />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-black/50 to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-[#0c0c0e]/80 to-transparent" />
             </div>
 
-            {/* Summary */}
-            <p className="text-[12px] leading-relaxed text-zinc-400 line-clamp-1 min-h-[18px]">
-              {instrument.summary}
-            </p>
-
-            {drivers.length > 0 ? (
-              <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setShowQuickDrivers((v) => !v);
-                  }}
-                  className="flex w-full items-center justify-between text-left"
-                >
-                  <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                    Quick drivers
-                  </span>
-                  <span className="text-[9px] text-zinc-500">
-                    {showQuickDrivers ? "Hide" : "Show"}
-                  </span>
-                </button>
-
-                {showQuickDrivers ? (
-                  <div className="mt-2 space-y-1.5 border-t border-white/[0.05] pt-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[9px] tracking-wide text-zinc-600">Top 3 signals</span>
-                      {generatedAt ? (
-                        <span className="text-[9px] tracking-wide text-zinc-600">
-                          {new Date(generatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      ) : null}
-                    </div>
-                    {drivers.map((driver) => (
-                      <div key={driver.label} className="flex items-start gap-1.5 text-[10px] leading-[1.45]">
-                        <span className="mt-0.5 rounded border border-indigo-400/25 bg-indigo-500/[0.12] px-1 py-[1px] text-[8px] font-semibold tracking-[0.12em] text-indigo-200">
-                          {driver.label}
-                        </span>
-                        <span className="text-zinc-400">{driver.value}</span>
-                      </div>
-                    ))}
-                    <p className="mt-2 border-t border-white/[0.05] pt-2 text-[10px] leading-[1.45] text-zinc-500">
-                      {confidenceReason(instrument)}
-                    </p>
-                  </div>
-                ) : null}
+            {/* Default visible Key Highlight */}
+            {drivers.length > 0 && (
+              <div className="rounded-xl border border-white/[0.04] bg-white/[0.015] px-3.5 py-3">
+                <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 mb-2 flex items-center gap-1.5">
+                  <span className={cn("h-1.5 w-1.5 rounded-full", isBullish ? "bg-emerald-400" : isBearish ? "bg-rose-400" : "bg-zinc-400")} />
+                  Top Driver · {drivers[0].label}
+                </div>
+                <p className="text-[12px] leading-relaxed text-zinc-400 line-clamp-2">
+                  {drivers[0].value}
+                </p>
               </div>
-            ) : null}
+            )}
 
             {/* Tap hint */}
-            <div className="flex items-center justify-center gap-1.5 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-              <span className="text-[9px] font-medium tracking-wider text-zinc-600">
-                CLICK FOR FULL ANALYSIS
+            <div className="flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100 mt-1">
+              <span className="text-[9px] font-bold tracking-widest text-zinc-600">
+                CLICK FOR FULL AI REPORT
               </span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Detail Modal */}
       {showDetail && (
         <InstrumentDetailModal
           instrument={instrument}

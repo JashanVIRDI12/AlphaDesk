@@ -9,8 +9,10 @@ import { TrendingUp } from "lucide-react";
 
 import { AuthControls } from "@/components/auth/auth-controls";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { TopStatusStrip } from "@/components/trading/top-status-strip";
+import type { MarketSession } from "@/data/market";
 
-export function DashboardHeader() {
+export function DashboardHeader({ sessions }: { sessions: MarketSession[] }) {
   const { data: session } = useSession();
   const name = session?.user?.name ?? "";
   const initials = name
@@ -21,33 +23,38 @@ export function DashboardHeader() {
     .join("") || "HF";
 
   return (
-    <header className="sticky top-0 z-30 relative border-b border-white/10 bg-black/40 backdrop-blur-2xl">
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-indigo-500/5" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-indigo-400/20 to-transparent" />
+    <header className="sticky top-0 z-30 relative border-b border-white/10 bg-[#0c0c0e] backdrop-blur-2xl">
+      <div className="relative mx-auto w-full max-w-[1800px] 2xl:max-w-[2400px] flex flex-col md:flex-row md:items-center justify-between gap-2 px-4 py-2 md:px-6">
 
-      <div className="relative mx-auto flex w-full max-w-[1400px] flex-wrap items-center justify-between gap-2 px-4 py-2.5 md:px-6">
-        <Link href="/" className="group flex items-center gap-3">
-          <div className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.03] transition-all duration-300 group-hover:border-indigo-500/30 group-hover:bg-indigo-500/[0.08]">
+        {/* Left: Branding */}
+        <Link href="/" className="group flex items-center gap-3 w-max">
+          <div className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.03] transition-all duration-300 group-hover:border-indigo-500/30 group-hover:bg-indigo-500/[0.08]">
             <TrendingUp className="h-4 w-4 text-zinc-400 transition-colors duration-300 group-hover:text-indigo-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <div className="text-[13px] font-semibold tracking-tight">GetTradingBias</div>
-              <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[9px] font-semibold tracking-[0.18em] text-zinc-300">
-                BETA
+              <div className="text-[12px] font-semibold tracking-tight">AlphaDesk</div>
+              <span className="rounded bg-white/[0.03] px-1.5 py-0.5 text-[8px] font-semibold tracking-[0.18em] text-zinc-400">
+                PRO
               </span>
             </div>
-            <div className="hidden text-[10px] font-medium tracking-wide text-zinc-500 sm:block">
+            <div className="hidden text-[9px] font-medium tracking-wide text-zinc-600 sm:block">
               INSTITUTIONAL TERMINAL
             </div>
           </div>
         </Link>
 
-        <div className="flex items-center gap-0.5 sm:gap-1">
+        {/* Middle: Integrated Status Strip */}
+        <div className="flex-1 flex justify-center py-2 md:py-0">
+          <TopStatusStrip sessions={sessions} />
+        </div>
+
+        {/* Right: Auth */}
+        <div className="flex items-center justify-end gap-1.5 w-max">
           <AuthControls />
 
-          <Avatar className="ml-1 h-9 w-9 ring-1 ring-white/10">
-            <AvatarFallback className="bg-white/[0.04] text-[11px] font-medium">
+          <Avatar className="ml-1 h-8 w-8 ring-1 ring-white/10">
+            <AvatarFallback className="bg-white/[0.04] text-[10px] font-medium">
               {initials}
             </AvatarFallback>
           </Avatar>

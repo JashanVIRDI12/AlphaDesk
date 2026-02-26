@@ -123,9 +123,10 @@ function writeUsers(users: StoredUser[]): void {
 
 export function generateTerminalId(): string {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const bytes = crypto.randomBytes(8);
     let id = "AD-";
     for (let i = 0; i < 8; i++) {
-        id += chars[Math.floor(Math.random() * chars.length)];
+        id += chars[bytes[i] % chars.length];
     }
     return id;
 }
@@ -141,8 +142,30 @@ export function generateAccessCode(): string {
     return code;
 }
 
+const PBKDF2_ITERATIONS = 100_000;
+const PBKDF2_KEYLEN = 64;
+const PBKDF2_DIGEST = "sha512";
+
 export function hashPassword(plain: string): string {
-    return crypto.createHash("sha256").update(plain).digest("hex");
+    const salt = crypto.randomBytes(16).toString("hex");
+    const hash = crypto
+        .pbkdf2Sync(plain, salt, PBKDF2_ITERATIONS, PBKDF2_KEYLEN, PBKDF2_DIGEST)
+        .toString("hex");
+    return `pbkdf2:${salt}:${hash}`;
+}
+
+export function verifyPassword(plain: string, stored: string): boolean {
+    // Legacy SHA-256 (no prefix) — still verify but will be rehashed on next write
+    if (!stored.startsWith("pbkdf2:")) {
+        const legacy = crypto.createHash("sha256").update(plain).digest("hex");
+        return legacy === stored;
+    }
+    const [, salt, hash] = stored.split(":");
+    if (!salt || !hash) return false;
+    const candidate = crypto
+        .pbkdf2Sync(plain, salt, PBKDF2_ITERATIONS, PBKDF2_KEYLEN, PBKDF2_DIGEST)
+        .toString("hex");
+    return crypto.timingSafeEqual(Buffer.from(candidate, "hex"), Buffer.from(hash, "hex"));
 }
 
 export async function createUser(params: {
@@ -224,23 +247,20 @@ export async function authenticateUser(
     terminalId: string,
     accessCode: string,
 ): Promise<StoredUser | null> {
-    const hashed = hashPassword(accessCode);
-
     if (kvConfigured()) {
         const user = await kvGetJson<StoredUser>(terminalKey(terminalId));
         if (!user) return null;
-        return user.accessCode === hashed ? user : null;
+        return verifyPassword(accessCode, user.accessCode) ? user : null;
     }
 
     const users = readUsers();
 
     const user = users.find(
-        (u) =>
-            u.terminalId.toUpperCase() === terminalId.trim().toUpperCase() &&
-            u.accessCode === hashed,
+        (u) => u.terminalId.toUpperCase() === terminalId.trim().toUpperCase(),
     );
+    if (!user) return null;
 
-    return user ?? null;
+    return verifyPassword(accessCode, user.accessCode) ? user : null;
 }
 
 export async function findUserByEmail(email: string): Promise<StoredUser | null> {

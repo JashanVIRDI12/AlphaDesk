@@ -1,6 +1,5 @@
 import NextAuth from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { authenticateUser } from "@/lib/users";
+import GoogleProvider from "next-auth/providers/google";
 
 const CANONICAL_BASE_URL =
   process.env.NODE_ENV === "production"
@@ -10,71 +9,34 @@ const CANONICAL_BASE_URL =
 const handler = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        name: { label: "Terminal ID", type: "text" },
-        password: { label: "Access Code", type: "password" },
-      },
-      async authorize(credentials: Record<string, string> | undefined) {
-        const terminalId = credentials?.name?.trim();
-        const accessCode = credentials?.password;
-
-        if (!terminalId) {
-          throw new Error("NAME_REQUIRED");
-        }
-
-        if (!accessCode) {
-          throw new Error("PASSWORD_REQUIRED");
-        }
-
-        // Try authenticating against stored users first
-        const user = await authenticateUser(terminalId, accessCode);
-        if (user) {
-          return {
-            id: user.terminalId,
-            name: user.fullName,
-            email: user.email,
-          };
-        }
-
-        // Fallback: check legacy AUTH_PASSWORD (for backward compatibility)
-        const legacyPassword = process.env.AUTH_PASSWORD;
-        if (legacyPassword && accessCode === legacyPassword) {
-          return {
-            id: terminalId.toLowerCase().replace(/\s+/g, "-"),
-            name: terminalId,
-          };
-        }
-
-        throw new Error("INVALID_PASSWORD");
-      },
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     }),
   ],
   session: {
     strategy: "jwt",
   },
+  pages: {
+    signIn: "/dashboard",
+  },
   callbacks: {
     async redirect({ url }) {
-      // Avoid misconfigured NEXTAUTH_URL (e.g. localhost) in production deployments.
-      // Always redirect users back to the canonical host.
       try {
         const target = new URL(url, CANONICAL_BASE_URL);
         const canonical = new URL(CANONICAL_BASE_URL);
-
         if (target.origin === canonical.origin) return target.toString();
-
-        // If NextAuth passes a full external URL, ignore it and force dashboard.
         return new URL("/dashboard", CANONICAL_BASE_URL).toString();
       } catch {
         return new URL("/dashboard", CANONICAL_BASE_URL).toString();
       }
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account, profile }) {
       if (user) {
         token.sub = user.id;
         token.name = user.name;
         token.email = user.email;
+        token.picture = user.image;
       }
       return token;
     },
@@ -82,6 +44,7 @@ const handler = NextAuth({
       if (session.user) {
         session.user.name = token.name ?? session.user.name;
         session.user.email = token.email ?? session.user.email ?? undefined;
+        session.user.image = (token.picture as string | null) ?? session.user.image ?? undefined;
       }
       return session;
     },

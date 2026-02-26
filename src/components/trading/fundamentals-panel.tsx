@@ -207,7 +207,7 @@ function OverviewRender({ text }: { text: string }) {
   );
 }
 
-export function FundamentalsPanel({
+export function CalendarDesk({
   riskMode,
   events,
 }: {
@@ -469,56 +469,39 @@ export function FundamentalsPanel({
   }, [todayKey, riskMode, overviewText]);
 
   return (
-    <Card className="relative overflow-hidden border-white/[0.08] bg-gradient-to-b from-indigo-500/[0.08] via-purple-500/[0.04] to-transparent shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_22px_80px_rgba(0,0,0,0.5)]">
-      {/* Top edge highlight */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-300/25 to-transparent" />
-
+    <div className="flex h-full flex-col p-4 sm:p-6 bg-black/10 sm:border-y sm:border-l sm:border-r-0 lg:border-white/[0.04]">
       {/* ── Header ── */}
-      <CardHeader className="px-4 pb-2.5 pt-3.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md border border-white/[0.05] bg-white/[0.02]">
-              <Calendar className="h-3 w-3 text-zinc-500" />
-            </div>
-            <span className="text-[13px] font-semibold tracking-tight text-zinc-200">
-              Fundamentals
-            </span>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md border border-white/[0.05] bg-white/[0.02]">
+            <Calendar className="h-3 w-3 text-zinc-400" />
           </div>
-          <div className="flex items-center gap-2">
-            {/* Timezone selector */}
-            <div className="flex items-center gap-px rounded-lg border border-white/[0.05] bg-white/[0.02] p-[3px]">
-              {TIMEZONE_OPTIONS.map((tz) => (
-                <button
-                  key={tz.value}
-                  onClick={() => setSelectedTz(tz.value)}
-                  className={cn(
-                    "rounded-md px-2 py-[3px] text-[9px] font-medium tracking-wide transition-all duration-300",
-                    selectedTz === tz.value
-                      ? "bg-white/[0.08] text-zinc-200 shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-400",
-                  )}
-                >
-                  {tz.short}
-                </button>
-              ))}
-            </div>
-            {/* Risk badge */}
-            <Badge
-              variant="outline"
-              className={cn(
-                "rounded-full border px-2 py-0.5 text-[9px] font-medium tracking-wider",
-                riskMode === "Risk-on"
-                  ? "border-emerald-500/10 bg-emerald-500/[0.06] text-emerald-400/80"
-                  : "border-rose-500/10 bg-rose-500/[0.06] text-rose-400/80",
-              )}
-            >
-              {riskMode.toUpperCase()}
-            </Badge>
+          <h4 className="text-sm font-semibold tracking-tight text-zinc-200">
+            Calendar & Risk
+          </h4>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Timezone selector */}
+          <div className="flex items-center gap-px rounded-lg border border-white/[0.05] bg-white/[0.02] p-[3px] hidden sm:flex">
+            {TIMEZONE_OPTIONS.map((tz) => (
+              <button
+                key={tz.value}
+                onClick={() => setSelectedTz(tz.value)}
+                className={cn(
+                  "rounded-md px-2 py-[3px] text-[9px] font-medium tracking-wide transition-all duration-300",
+                  selectedTz === tz.value
+                    ? "bg-white/[0.08] text-zinc-200 shadow-sm"
+                    : "text-zinc-600 hover:text-zinc-400",
+                )}
+              >
+                {tz.short}
+              </button>
+            ))}
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="space-y-4 px-4 pb-4 pt-0">
+      <div className="space-y-6">
         {/* ── Bank Holidays ── */}
         {!loading && holidays.length > 0 ? (
           <div className="flex flex-wrap gap-2">
@@ -592,9 +575,9 @@ export function FundamentalsPanel({
                   const isCompleted =
                     eventDateValue !== null && nowDateValue !== null
                       ? eventDateValue < nowDateValue ||
-                        (eventDateValue === nowDateValue &&
-                          eventMinutes !== null &&
-                          eventMinutes <= nowMarker.minutes)
+                      (eventDateValue === nowDateValue &&
+                        eventMinutes !== null &&
+                        eventMinutes <= nowMarker.minutes)
                       : false;
 
                   return (
@@ -608,8 +591,13 @@ export function FundamentalsPanel({
                       <span className="w-[50px] shrink-0 text-[10px] font-mono font-semibold tabular-nums text-zinc-400">
                         {e.time}
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-zinc-300">
-                        {e.title}
+                      <span className="min-w-0 flex-1 flex items-center gap-1.5 truncate text-[11px] font-medium text-zinc-300">
+                        {e.impact === "High" ? (
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" title="High Impact" />
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Medium Impact" />
+                        )}
+                        <span className="truncate">{e.title}</span>
                       </span>
                       <span className="shrink-0 text-[9px] font-mono tabular-nums text-zinc-600">
                         {e.consensus} / {e.previous}
@@ -658,7 +646,7 @@ export function FundamentalsPanel({
                   : "AI brief unavailable"}
             </div>
           ) : overviewText ? (
-            <div className="max-h-[200px] overflow-y-auto rounded-xl border border-white/[0.04] bg-white/[0.015] px-3.5 py-3 text-[10px] leading-[1.7] text-zinc-400 scrollbar-thin scrollbar-thumb-white/10">
+            <div className="overflow-y-auto rounded-xl border border-white/[0.04] bg-white/[0.015] px-3.5 py-3 text-[10px] leading-[1.7] text-zinc-400 scrollbar-thin scrollbar-thumb-white/10">
               <OverviewRender text={overviewText} />
             </div>
           ) : noNews && holidays.length === 0 ? (
@@ -672,7 +660,7 @@ export function FundamentalsPanel({
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

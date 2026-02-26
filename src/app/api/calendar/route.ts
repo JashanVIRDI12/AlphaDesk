@@ -19,7 +19,7 @@ const ALLOWED_CURRENCIES = new Set([
 type CalendarEvent = {
   time: string;
   title: string;
-  impact: "High";
+  impact: "High" | "Medium";
   consensus: string;
   previous: string;
   currency: string;
@@ -181,7 +181,7 @@ function parseFeed(xml: string): FeedResult {
       continue;
     }
 
-    if (impact !== "High") continue;
+    if (impact !== "High" && impact !== "Medium") continue;
     if (!ALLOWED_CURRENCIES.has(currency)) continue;
 
     const time = extractTag(block, "time");
@@ -192,7 +192,7 @@ function parseFeed(xml: string): FeedResult {
     events.push({
       time,
       title: `${currency} · ${title}`,
-      impact: "High",
+      impact: impact as "High" | "Medium",
       consensus: forecast,
       previous,
       currency,
