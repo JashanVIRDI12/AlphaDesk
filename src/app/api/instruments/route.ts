@@ -613,37 +613,80 @@ async function fetchCalendarContext(baseUrl: string): Promise<string> {
    Fetches live posts per pair — gives AI crowd-sourced price levels,
    trader positioning signals, and recent narrative.
    ──────────────────────────────────────────────────────────────────── */
-async function fetchRedditContext(baseUrl: string): Promise<string> {
-    try {
-        const res = await fetch(`${baseUrl}/api/reddit`, {
-            signal: AbortSignal.timeout(10000),
-        });
-        if (!res.ok) return "Reddit data unavailable.";
-        const data = await res.json();
-        const posts = (data.posts ?? []) as Array<{
-            title: string;
-            selftext: string;
-            pair: string;
-            score: number;
-            numComments: number;
-            ago: string;
-        }>;
-        if (posts.length === 0) return "No Reddit posts found.";
+/* ── User-agent pool (rotate to avoid Vercel IP blocks) ── */
+const UA_POOL = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
+];
+function pickUA(): string { return UA_POOL[Math.floor(Math.random() * UA_POOL.length)]; }
 
-        // Group top posts per pair
-        const byPair: Record<string, typeof posts> = {};
-        for (const p of posts) {
-            const key = p.pair === "GENERAL" ? "GENERAL" : p.pair;
-            if (!byPair[key]) byPair[key] = [];
-            byPair[key].push(p);
+const REDDIT_PAIR_QUERIES = [
+    { pair: "EURUSD", terms: ["EURUSD", "EUR/USD", "eurusd"] },
+    { pair: "GBPUSD", terms: ["GBPUSD", "GBP/USD", "cable"] },
+    { pair: "XAUUSD", terms: ["XAUUSD", "XAU/USD", "gold forex", "xauusd"] },
+    { pair: "USDJPY", terms: ["USDJPY", "USD/JPY", "usdjpy"] },
+];
+
+async function redditSearchDirect(term: string, pair: string): Promise<{ pair: string; title: string; body: string; score: number; comments: number; ago: string }[]> {
+    const hosts = ["www.reddit.com", "old.reddit.com"];
+    for (const host of hosts) {
+        try {
+            const url = `https://${host}/r/Forex/search.json?q=${encodeURIComponent(term)}&sort=new&restrict_sr=1&limit=10&t=week`;
+            const res = await fetch(url, {
+                headers: {
+                    "User-Agent": pickUA(),
+                    "Accept": "application/json",
+                },
+                signal: AbortSignal.timeout(7000),
+            });
+            if (!res.ok) continue;
+            const json = await res.json();
+            const children = (json?.data?.children ?? []) as any[];
+            const now = Date.now();
+            return children.map((c: any) => {
+                const d = c.data;
+                const created = d.created_utc * 1000;
+                const diff = Math.floor((now - created) / 60_000);
+                const ago = diff < 60 ? `${diff}m` : diff < 1440 ? `${Math.floor(diff / 60)}h` : `${Math.floor(diff / 1440)}d`;
+                return {
+                    pair,
+                    title: (d.title ?? "").substring(0, 120),
+                    body: (d.selftext ?? "").substring(0, 120),
+                    score: d.score ?? 0,
+                    comments: d.num_comments ?? 0,
+                    ago,
+                };
+            });
+        } catch { continue; }
+    }
+    return [];
+}
+
+async function fetchRedditContext(_baseUrl: string): Promise<string> {
+    try {
+        // Fetch all pairs in parallel
+        const results = await Promise.all(
+            REDDIT_PAIR_QUERIES.map(({ pair, terms }) =>
+                redditSearchDirect(terms[0], pair)
+            )
+        );
+
+        const allPosts = results.flat();
+        if (allPosts.length === 0) return "Reddit data is temporarily unavailable.";
+
+        // Group by pair, take top 3 per pair
+        const byPair: Record<string, typeof allPosts> = {};
+        for (const p of allPosts) {
+            if (!byPair[p.pair]) byPair[p.pair] = [];
+            if (byPair[p.pair].length < 3) byPair[p.pair].push(p);
         }
 
         const sections: string[] = [];
-        for (const [pair, pairPosts] of Object.entries(byPair)) {
-            const top = pairPosts.slice(0, 4);
-            const lines = top.map((p) => {
-                const body = p.selftext ? ` — "${p.selftext.substring(0, 100).trim()}..."` : "";
-                return `  · [${p.score}↑ ${p.numComments}💬 ${p.ago}] ${p.title}${body}`;
+        for (const [pair, posts] of Object.entries(byPair)) {
+            const lines = posts.map((p) => {
+                const body = p.body ? ` — "${p.body.trim()}..."` : "";
+                return `  · [${p.score}↑ ${p.comments}💬 ${p.ago}] ${p.title}${body}`;
             });
             sections.push(`${pair}:\n${lines.join("\n")}`);
         }
@@ -652,6 +695,7 @@ async function fetchRedditContext(baseUrl: string): Promise<string> {
         return "Could not fetch Reddit data.";
     }
 }
+
 
 async function fetchMacroContext(baseUrl: string): Promise<string> {
     try {
