@@ -10,6 +10,7 @@ import { TrendingUp, LogOut } from "lucide-react";
 import { AuthControls } from "@/components/auth/auth-controls";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { TopStatusStrip } from "@/components/trading/top-status-strip";
+import { NewsTicker } from "@/components/trading/news-ticker";
 import type { MarketSession } from "@/data/market";
 
 export function DashboardHeader({ sessions }: { sessions: MarketSession[] }) {
@@ -24,6 +25,7 @@ export function DashboardHeader({ sessions }: { sessions: MarketSession[] }) {
 
   return (
     <header className="sticky top-0 z-30 relative border-b border-white/10 bg-[#0c0c0e] backdrop-blur-2xl">
+      {/* ── Main nav row ── */}
       <div className="relative mx-auto w-full max-w-[1800px] 2xl:max-w-[2400px] flex flex-wrap items-center justify-between gap-y-3 gap-x-2 px-4 py-3 md:px-6 lg:flex-nowrap">
 
         {/* Left: Branding */}
@@ -70,6 +72,9 @@ export function DashboardHeader({ sessions }: { sessions: MarketSession[] }) {
           </Avatar>
         </div>
       </div>
+
+      {/* ── News ticker sub-strip ── */}
+      <NewsTicker />
     </header>
   );
 }
