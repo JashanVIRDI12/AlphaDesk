@@ -613,81 +613,86 @@ async function fetchCalendarContext(baseUrl: string): Promise<string> {
    Fetches live posts per pair — gives AI crowd-sourced price levels,
    trader positioning signals, and recent narrative.
    ──────────────────────────────────────────────────────────────────── */
-/* ── User-agent pool (rotate to avoid Vercel IP blocks) ── */
-const UA_POOL = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
-];
-function pickUA(): string { return UA_POOL[Math.floor(Math.random() * UA_POOL.length)]; }
-
-const REDDIT_PAIR_QUERIES = [
-    { pair: "EURUSD", terms: ["EURUSD", "EUR/USD", "eurusd"] },
-    { pair: "GBPUSD", terms: ["GBPUSD", "GBP/USD", "cable"] },
-    { pair: "XAUUSD", terms: ["XAUUSD", "XAU/USD", "gold forex", "xauusd"] },
-    { pair: "USDJPY", terms: ["USDJPY", "USD/JPY", "usdjpy"] },
+/* ───────────────────────────────────────────────────────────────────
+   Reddit via RSS  — RSS XML is NOT subject to the JSON API rate-limit
+   that Vercel datacenter IPs hit. Works reliably in production.
+   ─────────────────────────────────────────────────────────────────── */
+const INSTR_REDDIT_PAIRS = [
+    { pair: "EURUSD", term: "EURUSD" },
+    { pair: "GBPUSD", term: "GBPUSD" },
+    { pair: "XAUUSD", term: "XAUUSD" },
+    { pair: "USDJPY", term: "USDJPY" },
 ];
 
-async function redditSearchDirect(term: string, pair: string): Promise<{ pair: string; title: string; body: string; score: number; comments: number; ago: string }[]> {
-    const hosts = ["www.reddit.com", "old.reddit.com"];
-    for (const host of hosts) {
-        try {
-            const url = `https://${host}/r/Forex/search.json?q=${encodeURIComponent(term)}&sort=new&restrict_sr=1&limit=10&t=week`;
-            const res = await fetch(url, {
-                headers: {
-                    "User-Agent": pickUA(),
-                    "Accept": "application/json",
-                },
-                signal: AbortSignal.timeout(7000),
-            });
-            if (!res.ok) continue;
-            const json = await res.json();
-            const children = (json?.data?.children ?? []) as any[];
-            const now = Date.now();
-            return children.map((c: any) => {
-                const d = c.data;
-                const created = d.created_utc * 1000;
-                const diff = Math.floor((now - created) / 60_000);
-                const ago = diff < 60 ? `${diff}m` : diff < 1440 ? `${Math.floor(diff / 60)}h` : `${Math.floor(diff / 1440)}d`;
-                return {
-                    pair,
-                    title: (d.title ?? "").substring(0, 120),
-                    body: (d.selftext ?? "").substring(0, 120),
-                    score: d.score ?? 0,
-                    comments: d.num_comments ?? 0,
-                    ago,
-                };
-            });
-        } catch { continue; }
+function rssExtract(xml: string, tag: string): string {
+    const open = `<${tag}>`;
+    const close = `</${tag}>`;
+    const cdataOpen = `<${tag}><![CDATA[`;
+    const cdataClose = `]]></${tag}>`;
+    let s = xml.indexOf(cdataOpen);
+    if (s !== -1) {
+        s += cdataOpen.length;
+        const e = xml.indexOf(cdataClose, s);
+        return e === -1 ? "" : xml.substring(s, e).trim();
     }
-    return [];
+    s = xml.indexOf(open);
+    if (s === -1) return "";
+    s += open.length;
+    const e = xml.indexOf(close, s);
+    return e === -1 ? "" : xml.substring(s, e).replace(/<[^>]+>/g, "").trim();
+}
+
+function rssTimeAgo(pubDate: string): string {
+    const diff = Math.floor((Date.now() - new Date(pubDate).getTime()) / 60_000);
+    if (diff < 60) return `${diff}m`;
+    if (diff < 1440) return `${Math.floor(diff / 60)}h`;
+    return `${Math.floor(diff / 1440)}d`;
+}
+
+async function redditSearchRSS(term: string, pair: string): Promise<{ pair: string; title: string; ago: string }[]> {
+    try {
+        // Reddit RSS search — works from Vercel IPs unlike the JSON API
+        const url = `https://www.reddit.com/r/Forex/search.rss?q=${encodeURIComponent(term)}&sort=new&restrict_sr=on&t=week`;
+        const res = await fetch(url, {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (compatible; GetTradingBias/2.0; +https://gettradingbias.com)",
+                "Accept": "application/rss+xml, application/xml, text/xml",
+            },
+            signal: AbortSignal.timeout(8000),
+        });
+        if (!res.ok) return [];
+        const xml = await res.text();
+        const items: { pair: string; title: string; ago: string }[] = [];
+        const parts = xml.split("<entry>");
+        for (let i = 1; i < parts.length && items.length < 5; i++) {
+            const block = parts[i].split("</entry>")[0];
+            const title = rssExtract(block, "title");
+            const updated = rssExtract(block, "updated") || rssExtract(block, "published");
+            if (!title || title.length < 5) continue;
+            items.push({ pair, title: title.substring(0, 120), ago: updated ? rssTimeAgo(updated) : "?" });
+        }
+        return items;
+    } catch {
+        return [];
+    }
 }
 
 async function fetchRedditContext(_baseUrl: string): Promise<string> {
     try {
-        // Fetch all pairs in parallel
         const results = await Promise.all(
-            REDDIT_PAIR_QUERIES.map(({ pair, terms }) =>
-                redditSearchDirect(terms[0], pair)
-            )
+            INSTR_REDDIT_PAIRS.map(({ pair, term }) => redditSearchRSS(term, pair))
         );
-
         const allPosts = results.flat();
         if (allPosts.length === 0) return "Reddit data is temporarily unavailable.";
 
-        // Group by pair, take top 3 per pair
         const byPair: Record<string, typeof allPosts> = {};
         for (const p of allPosts) {
             if (!byPair[p.pair]) byPair[p.pair] = [];
             if (byPair[p.pair].length < 3) byPair[p.pair].push(p);
         }
-
         const sections: string[] = [];
         for (const [pair, posts] of Object.entries(byPair)) {
-            const lines = posts.map((p) => {
-                const body = p.body ? ` — "${p.body.trim()}..."` : "";
-                return `  · [${p.score}↑ ${p.comments}💬 ${p.ago}] ${p.title}${body}`;
-            });
+            const lines = posts.map((p) => `  · [${p.ago}] ${p.title}`);
             sections.push(`${pair}:\n${lines.join("\n")}`);
         }
         return sections.join("\n\n");

@@ -168,14 +168,7 @@ async function fetchMacroIndicators(baseUrl: string): Promise<string> {
     }
 }
 
-/* ── UA pool for Reddit fetches ── */
-const MD_UA_POOL = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
-];
-function mdPickUA() { return MD_UA_POOL[Math.floor(Math.random() * MD_UA_POOL.length)]; }
-
+/* ── Reddit via RSS (works from Vercel datacenter IPs) ── */
 const MD_PAIRS = [
     { pair: "EURUSD", term: "EURUSD" },
     { pair: "GBPUSD", term: "GBPUSD" },
@@ -183,33 +176,51 @@ const MD_PAIRS = [
     { pair: "USDJPY", term: "USDJPY" },
 ];
 
-async function mdFetchPair(term: string, pair: string): Promise<{ pair: string; title: string; body: string; score: number; comments: number; ago: string }[]> {
-    const hosts = ["www.reddit.com", "old.reddit.com"];
-    for (const host of hosts) {
-        try {
-            const url = `https://${host}/r/Forex/search.json?q=${encodeURIComponent(term)}&sort=new&restrict_sr=1&limit=8&t=week`;
-            const res = await fetch(url, {
-                headers: { "User-Agent": mdPickUA(), "Accept": "application/json" },
-                signal: AbortSignal.timeout(7000),
-            });
-            if (!res.ok) continue;
-            const json = await res.json();
-            const children = (json?.data?.children ?? []) as any[];
-            const now = Date.now();
-            return children.map((c: any) => {
-                const d = c.data;
-                const diff = Math.floor((now - d.created_utc * 1000) / 60_000);
-                const ago = diff < 60 ? `${diff}m` : diff < 1440 ? `${Math.floor(diff / 60)}h` : `${Math.floor(diff / 1440)}d`;
-                return { pair, title: (d.title ?? "").substring(0, 100), body: (d.selftext ?? "").substring(0, 80), score: d.score ?? 0, comments: d.num_comments ?? 0, ago };
-            });
-        } catch { continue; }
-    }
-    return [];
+function mdRssExtract(xml: string, tag: string): string {
+    const cdataOpen = `<${tag}><![CDATA[`;
+    const cdataClose = `]]></${tag}>`;
+    let s = xml.indexOf(cdataOpen);
+    if (s !== -1) { s += cdataOpen.length; const e = xml.indexOf(cdataClose, s); return e === -1 ? "" : xml.substring(s, e).trim(); }
+    s = xml.indexOf(`<${tag}>`);
+    if (s === -1) return "";
+    s += `<${tag}>`.length;
+    const e = xml.indexOf(`</${tag}>`, s);
+    return e === -1 ? "" : xml.substring(s, e).replace(/<[^>]+>/g, "").trim();
+}
+
+function mdRssAgo(pubDate: string): string {
+    const diff = Math.floor((Date.now() - new Date(pubDate).getTime()) / 60_000);
+    return diff < 60 ? `${diff}m` : diff < 1440 ? `${Math.floor(diff / 60)}h` : `${Math.floor(diff / 1440)}d`;
+}
+
+async function mdFetchPairRSS(term: string, pair: string): Promise<{ pair: string; title: string; ago: string }[]> {
+    try {
+        const url = `https://www.reddit.com/r/Forex/search.rss?q=${encodeURIComponent(term)}&sort=new&restrict_sr=on&t=week`;
+        const res = await fetch(url, {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (compatible; GetTradingBias/2.0; +https://gettradingbias.com)",
+                "Accept": "application/rss+xml, application/xml, text/xml",
+            },
+            signal: AbortSignal.timeout(8000),
+        });
+        if (!res.ok) return [];
+        const xml = await res.text();
+        const items: { pair: string; title: string; ago: string }[] = [];
+        const parts = xml.split("<entry>");
+        for (let i = 1; i < parts.length && items.length < 5; i++) {
+            const block = parts[i].split("</entry>")[0];
+            const title = mdRssExtract(block, "title");
+            const updated = mdRssExtract(block, "updated") || mdRssExtract(block, "published");
+            if (!title || title.length < 5) continue;
+            items.push({ pair, title: title.substring(0, 100), ago: updated ? mdRssAgo(updated) : "?" });
+        }
+        return items;
+    } catch { return []; }
 }
 
 async function fetchRedditContext(_baseUrl: string): Promise<string> {
     try {
-        const results = await Promise.all(MD_PAIRS.map(({ pair, term }) => mdFetchPair(term, pair)));
+        const results = await Promise.all(MD_PAIRS.map(({ pair, term }) => mdFetchPairRSS(term, pair)));
         const allPosts = results.flat();
         if (allPosts.length === 0) return "Reddit data is temporarily unavailable.";
 
@@ -218,14 +229,9 @@ async function fetchRedditContext(_baseUrl: string): Promise<string> {
             if (!byPair[p.pair]) byPair[p.pair] = [];
             if (byPair[p.pair].length < 3) byPair[p.pair].push(p);
         }
-
         const sections: string[] = [];
         for (const [pair, posts] of Object.entries(byPair)) {
-            const lines = posts.map((p) => {
-                const body = p.body ? ` — "${p.body.trim()}..."` : "";
-                return `  · [${p.score}↑ ${p.comments}💬 ${p.ago}] ${p.title}${body}`;
-            });
-            sections.push(`${pair}:\n${lines.join("\n")}`);
+            sections.push(`${pair}:\n${posts.map((p) => `  · [${p.ago}] ${p.title}`).join("\n")}`);
         }
         return sections.join("\n\n");
     } catch {
