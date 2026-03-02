@@ -124,7 +124,35 @@ function formatLocalTime(date: Date, timeZone: string) {
     return new Intl.DateTimeFormat("en-US", { timeZone, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(date);
 }
 
+/**
+ * Forex markets are closed on weekends.
+ * Weekend = Saturday 00:00 UTC through Sunday 23:59 UTC
+ * (Forex actually closes Friday ~21:00 UTC and reopens Sunday ~21:00 UTC,
+ *  but checking Sat/Sun in the session's LOCAL timezone is accurate enough
+ *  and keeps the logic simple.)
+ */
+function isForexWeekend(now: Date): boolean {
+    // Use New York timezone as the canonical session-close timezone
+    const nyFormatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        weekday: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+    });
+    const parts = nyFormatter.formatToParts(now);
+    const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+    const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+
+    // Forex closes Friday at 5pm NY (17:00) and reopens Sunday at 5pm NY (17:00)
+    if (weekday === "Fri" && hour >= 17) return true;
+    if (weekday === "Sat") return true;
+    if (weekday === "Sun" && hour < 17) return true;
+    return false;
+}
+
 function computeSessionStatus(now: Date, spec: SessionSpec): MarketSession["status"] {
+    if (isForexWeekend(now)) return "Closed";
     const nowMin = minutesSinceMidnight(now, STATUS_TIME_ZONE);
     const start = parseHHMM(spec.activeStart);
     const end = parseHHMM(spec.activeEnd);
@@ -164,6 +192,8 @@ export function TopStatusStrip({ sessions }: { sessions: MarketSession[] }) {
         return () => window.clearInterval(id);
     }, []);
 
+    const weekend = React.useMemo(() => isForexWeekend(now), [now]);
+
     const computedSessions = React.useMemo(() => {
         return sessions.map((s) => {
             const spec = SESSION_SPECS[s.name];
@@ -171,7 +201,11 @@ export function TopStatusStrip({ sessions }: { sessions: MarketSession[] }) {
         });
     }, [sessions, now]);
 
-    const tone = signal?.tone || "trade";
+    const weekendSignal: TradeSignal | null = weekend
+        ? { tone: "no_trade", title: "MARKETS CLOSED", reason: "Forex markets are closed on weekends. Trading resumes Sunday 5:00 PM New York time." }
+        : null;
+    const displaySignal = weekend ? weekendSignal : signal;
+    const tone = displaySignal?.tone || "trade";
     const bgAccent = tone === "no_trade" ? "bg-rose-500/10 text-rose-300 border-rose-500/20" : tone === "caution" ? "bg-amber-500/10 text-amber-300 border-amber-500/20" : "bg-emerald-500/10 text-emerald-300 border-emerald-500/20";
     const Icon = tone === "no_trade" ? AlertTriangle : tone === "caution" ? HelpCircle : TrendingUp;
 
@@ -183,13 +217,13 @@ export function TopStatusStrip({ sessions }: { sessions: MarketSession[] }) {
                     <Icon className="h-4 w-4 xl:h-3 xl:w-3" />
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2">
-                    {signal ? (
+                    {displaySignal ? (
                         <>
                             <span className={cn("text-[11px] sm:text-[12px] xl:text-[10px] font-bold tracking-widest uppercase whitespace-nowrap", tone === "no_trade" ? "text-rose-400" : tone === "caution" ? "text-amber-400" : "text-emerald-400")}>
-                                {signal.title}
+                                {displaySignal.title}
                             </span>
                             <span className="text-zinc-600">—</span>
-                            <span className="text-[11px] xl:text-[10px] text-zinc-400 leading-snug truncate max-w-[140px] sm:max-w-none">{signal.reason}</span>
+                            <span className="text-[11px] xl:text-[10px] text-zinc-400 leading-snug truncate max-w-[140px] sm:max-w-none">{displaySignal.reason}</span>
                         </>
                     ) : (
                         <span className="text-[11px] xl:text-[10px] text-zinc-500 animate-pulse">Computing trade signal...</span>

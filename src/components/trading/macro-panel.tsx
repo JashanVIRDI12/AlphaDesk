@@ -205,6 +205,18 @@ export function MacroPanel({
                     ))}
                   </div>
                 )}
+                {/* Community Sentiment from Reddit */}
+                {deskData.communitySentiment && (
+                  <div className="mt-4 pt-4 border-t border-white/[0.04]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <svg viewBox="0 0 20 20" className="h-3 w-3 shrink-0 fill-orange-400/70" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 0C4.477 0 0 4.477 0 10s4.477 10 10 10 10-4.477 10-10S15.523 0 10 0zm5.74 9.28a1.3 1.3 0 0 1 .26.78 1.3 1.3 0 0 1-1.3 1.3 1.29 1.29 0 0 1-.82-.29c-.8.54-1.87.88-3.04.93l.52-2.43 1.68.36a.89.89 0 0 0 .88.87.89.89 0 0 0 .89-.89.89.89 0 0 0-.89-.89.89.89 0 0 0-.8.5l-1.88-.4a.12.12 0 0 0-.14.09l-.57 2.7c-1.2-.04-2.3-.38-3.12-.94a1.29 1.29 0 0 1-.82.29A1.3 1.3 0 0 1 5.3 9.28a1.3 1.3 0 0 1 1.3-1.3c.27 0 .52.08.73.22.73-.5 1.72-.82 2.8-.87L10.8 5.9a.12.12 0 0 1 .14-.09l1.98.42a.89.89 0 0 1 .83-.56.89.89 0 0 1 .89.89.89.89 0 0 1-.89.89.89.89 0 0 1-.88-.88l-1.77-.38-.44 2.08c1.08.05 2.05.37 2.77.86.21-.13.46-.2.73-.2a1.3 1.3 0 0 1 1.3 1.3zM8.05 10.5a.67.67 0 0 0-.67.67.67.67 0 0 0 .67.67.67.67 0 0 0 .67-.67.67.67 0 0 0-.67-.67zm3.9 0a.67.67 0 0 0-.67.67.67.67 0 0 0 .67.67.67.67 0 0 0 .67-.67.67.67 0 0 0-.67-.67zm-.94 2.42c-.44.44-1.28.48-1.52.48s-1.08-.04-1.52-.48a.12.12 0 0 0-.17.17c.56.56 1.56.6 1.69.6.13 0 1.13-.04 1.69-.6a.12.12 0 0 0-.17-.17z" />
+                      </svg>
+                      <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-orange-400/80">Community Pulse · r/Forex</span>
+                    </div>
+                    <p className="text-[12px] leading-relaxed text-zinc-500">{deskData.communitySentiment}</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -324,7 +336,15 @@ export function MacroPanel({
                 </a>
               ))}
 
-
+              {/* View all link */}
+              {filteredHeadlines.length > 0 && (
+                <a
+                  href="/dashboard/news"
+                  className="mt-2 flex items-center justify-center gap-1.5 rounded-lg border border-white/[0.05] bg-white/[0.02] py-2 text-[10px] font-semibold text-zinc-600 transition-all hover:border-white/[0.1] hover:text-zinc-400"
+                >
+                  View all {filteredHeadlines.length > 8 ? `${filteredHeadlines.length}` : ""} headlines →
+                </a>
+              )}
             </div>
 
           </div>

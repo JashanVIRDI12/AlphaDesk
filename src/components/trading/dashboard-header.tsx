@@ -5,7 +5,7 @@ import * as React from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, LogOut } from "lucide-react";
 
 import { AuthControls } from "@/components/auth/auth-controls";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -49,11 +49,21 @@ export function DashboardHeader({ sessions }: { sessions: MarketSession[] }) {
           <TopStatusStrip sessions={sessions} />
         </div>
 
-        {/* Right: Auth */}
-        <div className="flex items-center justify-end gap-1.5 w-max">
+        {/* Right: Exit + Auth + Avatar */}
+        <div className="flex items-center justify-end gap-2 w-max">
+
+          {/* Exit Dashboard */}
+          <Link
+            href="/"
+            className="group hidden sm:flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-1.5 text-[10px] font-semibold tracking-wide text-zinc-500 transition-all duration-200 hover:border-rose-500/20 hover:bg-rose-500/[0.06] hover:text-rose-400"
+          >
+            <LogOut className="h-3 w-3 transition-transform duration-200 group-hover:-translate-x-0.5" />
+            Exit
+          </Link>
+
           <AuthControls />
 
-          <Avatar className="ml-1 h-8 w-8 ring-1 ring-white/10">
+          <Avatar className="ml-0.5 h-8 w-8 ring-1 ring-white/10">
             <AvatarFallback className="bg-white/[0.04] text-[10px] font-medium">
               {initials}
             </AvatarFallback>

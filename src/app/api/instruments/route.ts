@@ -16,6 +16,7 @@ type InstrumentAnalysis = {
     newsDriver: string;
     technicalLevels: string;
     macroBackdrop: string;
+    redditSentiment: string;
 };
 
 type VolatilityPoint = {
@@ -59,6 +60,8 @@ const instrumentAnalysisSchema = z
         technical_levels: z.string().optional(),
         macroBackdrop: z.string().optional(),
         macro_backdrop: z.string().optional(),
+        redditSentiment: z.string().optional(),
+        reddit_sentiment: z.string().optional(),
     })
     .transform((item): InstrumentAnalysis => ({
         symbol: String(item.symbol),
@@ -69,6 +72,7 @@ const instrumentAnalysisSchema = z
         newsDriver: String(item.newsDriver ?? item.news_driver ?? ""),
         technicalLevels: String(item.technicalLevels ?? item.technical_levels ?? ""),
         macroBackdrop: String(item.macroBackdrop ?? item.macro_backdrop ?? ""),
+        redditSentiment: String(item.redditSentiment ?? item.reddit_sentiment ?? ""),
     }));
 
 const aiInstrumentsSchema = z
@@ -89,6 +93,7 @@ const instrumentsResponseSchema = z.object({
             newsDriver: z.string(),
             technicalLevels: z.string(),
             macroBackdrop: z.string(),
+            redditSentiment: z.string(),
         }),
     ),
     volatility: z.object({
@@ -603,6 +608,51 @@ async function fetchCalendarContext(baseUrl: string): Promise<string> {
     }
 }
 
+/* ────────────────────────────────────────────────────────────────────
+   PILLAR 4: REDDIT COMMUNITY SENTIMENT (r/Forex)
+   Fetches live posts per pair — gives AI crowd-sourced price levels,
+   trader positioning signals, and recent narrative.
+   ──────────────────────────────────────────────────────────────────── */
+async function fetchRedditContext(baseUrl: string): Promise<string> {
+    try {
+        const res = await fetch(`${baseUrl}/api/reddit`, {
+            signal: AbortSignal.timeout(10000),
+        });
+        if (!res.ok) return "Reddit data unavailable.";
+        const data = await res.json();
+        const posts = (data.posts ?? []) as Array<{
+            title: string;
+            selftext: string;
+            pair: string;
+            score: number;
+            numComments: number;
+            ago: string;
+        }>;
+        if (posts.length === 0) return "No Reddit posts found.";
+
+        // Group top posts per pair
+        const byPair: Record<string, typeof posts> = {};
+        for (const p of posts) {
+            const key = p.pair === "GENERAL" ? "GENERAL" : p.pair;
+            if (!byPair[key]) byPair[key] = [];
+            byPair[key].push(p);
+        }
+
+        const sections: string[] = [];
+        for (const [pair, pairPosts] of Object.entries(byPair)) {
+            const top = pairPosts.slice(0, 4);
+            const lines = top.map((p) => {
+                const body = p.selftext ? ` — "${p.selftext.substring(0, 100).trim()}..."` : "";
+                return `  · [${p.score}↑ ${p.numComments}💬 ${p.ago}] ${p.title}${body}`;
+            });
+            sections.push(`${pair}:\n${lines.join("\n")}`);
+        }
+        return sections.join("\n\n");
+    } catch {
+        return "Could not fetch Reddit data.";
+    }
+}
+
 async function fetchMacroContext(baseUrl: string): Promise<string> {
     try {
         const res = await fetch(`${baseUrl}/api/macro-data`, {
@@ -759,6 +809,7 @@ function buildFallback(
             newsDriver,
             technicalLevels,
             macroBackdrop,
+            redditSentiment: "Reddit sentiment unavailable in fallback mode.",
         };
     });
 }
@@ -792,12 +843,13 @@ export async function GET(req: Request) {
     const protocol = host.startsWith("localhost") ? "http" : "https";
     const baseUrl = `${protocol}://${host}`;
 
-    // ── Gather ALL three pillars in parallel ──
-    const [newsContext, calendarContext, macroContext, goldMarket, ...techSnapshots] =
+    // ── Gather ALL four pillars in parallel ──
+    const [newsContext, calendarContext, macroContext, redditContext, goldMarket, ...techSnapshots] =
         await Promise.all([
             fetchNewsContext(baseUrl),
             fetchCalendarContext(baseUrl),
             fetchMacroContext(baseUrl),
+            fetchRedditContext(baseUrl),
             fetchGoldMarketContext(),
             ...INSTRUMENTS.map((i) => fetchTechnicalData(i.yahoo, i.symbol)),
         ]);
@@ -814,20 +866,21 @@ export async function GET(req: Request) {
         hour12: true,
     });
 
-    // ── Three-pillar prompt ──
-    const systemPrompt = `You are an elite FX trader at a top-tier prop desk, known for blending NEWS FLOW with TECHNICAL ANALYSIS and MACRO context.
+    // ── Four-pillar prompt ──
+    const systemPrompt = `You are an elite FX trader at a top-tier prop desk, known for blending NEWS FLOW with TECHNICAL ANALYSIS, MACRO context, and COMMUNITY SENTIMENT from r/Forex.
 
 Your analysis methodology (in order of priority):
-1. NEWS FLOW (40% weight): What are the latest headlines saying? Which currencies are being mentioned? What's the sentiment? Breaking news > old news.
+1. NEWS FLOW (35% weight): What are the latest headlines saying? Which currencies are being mentioned? What's the sentiment? Breaking news > old news.
 2. TECHNICALS (30% weight): What does 1H and 4H price action show? Trend direction, momentum, key support/resistance levels. Use the actual price data provided.
-3. MACRO (30% weight): Central bank rates, CPI, GDP — these set the background but rarely change intraday bias.
+3. MACRO (20% weight): Central bank rates, CPI, GDP — these set the background but rarely change intraday bias.
+4. REDDIT COMMUNITY SENTIMENT (15% weight): What are traders on r/Forex discussing? Are there crowd-sourced levels, positioning signals, or narratives worth noting?
 
 RULES:
 - Your summary MUST reference at least one specific headline or news event AND one technical level/trend.
 - Never write a purely macro summary (e.g. "rates favor USD"). That's lazy analysis.
 - Good example: "BOJ-Ueda meeting headlines driving yen volatility; 4H trending up from 153.20 support. Watch 154.00 resistance."
 - Bad example: "Fed at 4.5% vs ECB 2.9% keeps EUR under pressure." (too macro-focused, no news or technicals)
-- Confidence should reflect how aligned all three pillars are. If news says one thing but technicals say another, lower confidence.
+- Confidence should reflect how aligned all four pillars are. If Reddit community strongly disagrees with your technical bias, reduce confidence by 5-10 points.
 - Respond with ONLY valid JSON. No code fences, no explanation.`;
 
     const pairList = INSTRUMENTS.map((i) => `${i.symbol} (${i.displayName})`).join(", ");
@@ -852,6 +905,12 @@ PILLAR 3: MACRO BACKDROP
 ${macroContext}
 
 ═══════════════════════════════════
+PILLAR 4: REDDIT r/Forex COMMUNITY SENTIMENT
+(Real trader discussions — treat as anecdotal positioning signals)
+═══════════════════════════════════
+${redditContext}
+
+═══════════════════════════════════
 GOLD-SPECIFIC MARKET INPUTS (Yahoo)
 ═══════════════════════════════════
 ${goldMarket.text}
@@ -866,14 +925,15 @@ INSTRUCTIONS
 ═══════════════════════════════════
 For each pair, provide:
 - bias: "Bullish" or "Bearish" (for the pair — EURUSD Bullish = EUR strength)
-- confidence: 30-95 (higher only when news + technicals + macro all agree)
+- confidence: 30-95 (higher only when news + technicals + macro + reddit all agree)
 - summary: 1 concise sentence referencing BOTH a news driver AND a technical level. Max 25 words.
 - newsDriver: 1–2 sentences on the key news headlines driving this pair right now. Be specific — cite actual headlines.
 - technicalLevels: 1–2 sentences on 1H/4H structure — trend, momentum, key support/resistance with prices. Use the data above.
 - macroBackdrop: 1 sentence on rates/CPI/GDP framing. For XAUUSD, explicitly include DXY + US real-yield proxy + GLD ETF-flow proxy.
+- redditSentiment: 1 sentence synthesising what r/Forex traders are saying about this pair from the Reddit data above. Note dominant sentiment (bullish/bearish/mixed), any crowd-sourced key levels mentioned, or notable narratives. If no relevant posts exist for this pair, say "No significant community discussion found."
 
 Respond with ONLY this JSON:
-{"instruments":[{"symbol":"<one of requested symbols>","displayName":"<matching display name>","bias":"Bullish|Bearish","confidence":65,"summary":"...","newsDriver":"...","technicalLevels":"...","macroBackdrop":"..."}]}
+{"instruments":[{"symbol":"<one of requested symbols>","displayName":"<matching display name>","bias":"Bullish|Bearish","confidence":65,"summary":"...","newsDriver":"...","technicalLevels":"...","macroBackdrop":"...","redditSentiment":"..."}]}
 
 IMPORTANT: return exactly ${INSTRUMENTS.length} instruments, one for each requested symbol: ${INSTRUMENTS.map((i) => i.symbol).join(", ")}.`;
 

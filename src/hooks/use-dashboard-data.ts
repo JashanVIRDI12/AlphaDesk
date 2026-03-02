@@ -57,6 +57,7 @@ type InstrumentData = {
   newsDriver?: string;
   technicalLevels?: string;
   macroBackdrop?: string;
+  redditSentiment?: string;
 };
 
 export type VolatilityPoint = {
@@ -91,6 +92,7 @@ type MacroDeskResponse = {
   brief?: string;
   keyThemes?: string[];
   riskSentiment?: string;
+  communitySentiment?: string;
   generatedAt: string;
 };
 
@@ -235,6 +237,43 @@ export function useInstruments() {
     },
     staleTime: 15 * 60 * 1000,
     refetchInterval: 15 * 60 * 1000,
+  });
+}
+
+export type RedditPost = {
+  id: string;
+  title: string;
+  url: string;
+  permalink: string;
+  author: string;
+  score: number;
+  numComments: number;
+  selftext: string;
+  pair: string;
+  flair: string;
+  publishedAt: string;
+  ago: string;
+  thumbnail: string | null;
+};
+
+type RedditResponse = {
+  posts: RedditPost[];
+  count: number;
+  cached: boolean;
+};
+
+export function useRedditPosts() {
+  return useQuery({
+    queryKey: ["reddit-posts"],
+    queryFn: async (): Promise<RedditResponse> => {
+      const res = await fetch("/api/reddit", { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to fetch Reddit posts");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 }
 

@@ -12,6 +12,7 @@ type MacroDeskResponse = {
     bias: string;
     bullets: string[];
     notes: string;
+    communitySentiment: string;
     cached: boolean;
     generatedAt: string;
 };
@@ -24,6 +25,7 @@ const aiMacroSchema = z
         keyThemes: z.array(z.string()).optional(),
         notes: z.string().optional(),
         brief: z.string().optional(),
+        communitySentiment: z.string().optional(),
     })
     .transform((v) => {
         const bulletSource = v.bullets ?? v.keyThemes ?? [];
@@ -35,6 +37,7 @@ const aiMacroSchema = z
             bias: (v.bias ?? v.riskSentiment ?? "Neutral").trim(),
             bullets,
             notes: (v.notes ?? v.brief ?? "").trim(),
+            communitySentiment: (v.communitySentiment ?? "").trim(),
         };
     });
 
@@ -43,6 +46,7 @@ const macroDeskResponseSchema = z.object({
     bias: z.string(),
     bullets: z.array(z.string()),
     notes: z.string(),
+    communitySentiment: z.string(),
     cached: z.boolean(),
     generatedAt: z.string(),
 });
@@ -164,6 +168,45 @@ async function fetchMacroIndicators(baseUrl: string): Promise<string> {
     }
 }
 
+async function fetchRedditContext(baseUrl: string): Promise<string> {
+    try {
+        const res = await fetch(`${baseUrl}/api/reddit`, {
+            signal: AbortSignal.timeout(10000),
+        });
+        if (!res.ok) return "Reddit data unavailable.";
+        const data = await res.json();
+        const posts = (data.posts ?? []) as Array<{
+            title: string;
+            selftext: string;
+            pair: string;
+            score: number;
+            numComments: number;
+            ago: string;
+        }>;
+        if (posts.length === 0) return "No Reddit posts found.";
+
+        const byPair: Record<string, typeof posts> = {};
+        for (const p of posts) {
+            const key = p.pair === "GENERAL" ? "GENERAL" : p.pair;
+            if (!byPair[key]) byPair[key] = [];
+            byPair[key].push(p);
+        }
+
+        const sections: string[] = [];
+        for (const [pair, pairPosts] of Object.entries(byPair)) {
+            const top = pairPosts.slice(0, 3);
+            const lines = top.map((p) => {
+                const body = p.selftext ? ` — "${p.selftext.substring(0, 80).trim()}..."` : "";
+                return `  · [${p.score}↑ ${p.numComments}💬 ${p.ago}] ${p.title}${body}`;
+            });
+            sections.push(`${pair}:\n${lines.join("\n")}`);
+        }
+        return sections.join("\n\n");
+    } catch {
+        return "Could not fetch Reddit data.";
+    }
+}
+
 /* ── AI call helper ── */
 async function callAI(
     apiKey: string,
@@ -171,7 +214,7 @@ async function callAI(
     systemPrompt: string,
     userPrompt: string,
     baseUrl: string,
-): Promise<{ bias: string; bullets: string[]; notes: string } | null> {
+): Promise<{ bias: string; bullets: string[]; notes: string; communitySentiment: string } | null> {
     try {
         const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
@@ -289,6 +332,7 @@ function buildLocalFallback(
         bias: "Neutral",
         bullets: bullets.slice(0, 5),
         notes: "AI analysis temporarily unavailable. Showing summary from live feeds.",
+        communitySentiment: "",
         cached: false,
         generatedAt: new Date().toISOString(),
     };
@@ -337,46 +381,47 @@ export async function GET(req: Request) {
     const baseUrl = `${protocol}://${host}`;
 
     inflight = (async () => {
-        // Gather live context in parallel (news + calendar + macro indicators)
-        const [newsContext, calendarContext, macroContext] = await Promise.all([
+        // Gather live context in parallel (news + calendar + macro indicators + reddit)
+        const [newsContext, calendarContext, macroContext, redditContext] = await Promise.all([
             fetchNewsHeadlines(baseUrl),
             fetchCalendarEvents(baseUrl),
             fetchMacroIndicators(baseUrl),
+            fetchRedditContext(baseUrl),
         ]);
 
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: "America/New_York",
-        hour12: true,
-    });
-    const dayStr = now.toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        timeZone: "America/New_York",
-    });
-
-    // Determine session context
-    const nyHour = parseInt(
-        now.toLocaleString("en-US", {
-            hour: "numeric",
-            hour12: false,
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
             timeZone: "America/New_York",
-        }),
-    );
-    let sessionNote = "";
-    if (nyHour >= 0 && nyHour < 8) sessionNote = "Asian session is active. London pre-open.";
-    else if (nyHour >= 8 && nyHour < 12) sessionNote = "London session is active. NY open upcoming.";
-    else if (nyHour >= 12 && nyHour < 17) sessionNote = "NY session overlap with London. Peak liquidity.";
-    else if (nyHour >= 17 && nyHour < 21) sessionNote = "NY afternoon. London closed. Liquidity thinning.";
-    else sessionNote = "Asian session open. Thin liquidity period.";
+            hour12: true,
+        });
+        const dayStr = now.toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            timeZone: "America/New_York",
+        });
 
-    const systemPrompt = `You are an elite FX macro strategist at a major hedge fund. You produce the morning macro desk brief that traders rely on before the day begins. You have access to live news headlines, the economic calendar, AND current macro indicators (central bank rates, CPI/inflation, GDP, unemployment) for major currencies. Use these numbers to support your analysis — reference specific rate differentials, inflation trends, and growth divergences. Be opinionated, specific, and concise. Think like a trader, not an academic. You MUST respond with valid JSON only.`;
+        // Determine session context
+        const nyHour = parseInt(
+            now.toLocaleString("en-US", {
+                hour: "numeric",
+                hour12: false,
+                timeZone: "America/New_York",
+            }),
+        );
+        let sessionNote = "";
+        if (nyHour >= 0 && nyHour < 8) sessionNote = "Asian session is active. London pre-open.";
+        else if (nyHour >= 8 && nyHour < 12) sessionNote = "London session is active. NY open upcoming.";
+        else if (nyHour >= 12 && nyHour < 17) sessionNote = "NY session overlap with London. Peak liquidity.";
+        else if (nyHour >= 17 && nyHour < 21) sessionNote = "NY afternoon. London closed. Liquidity thinning.";
+        else sessionNote = "Asian session open. Thin liquidity period.";
 
-    const userPrompt = `Generate today's AI Macro Desk brief.
+        const systemPrompt = `You are an elite FX macro strategist at a major hedge fund. You produce the morning macro desk brief that traders rely on before the day begins. You have access to live news headlines, the economic calendar, current macro indicators (central bank rates, CPI/inflation, GDP, unemployment), AND live community sentiment from r/Forex traders. Use these to support your analysis — reference specific rate differentials, inflation trends, growth divergences, and any notable community-observed positioning or market narratives. Be opinionated, specific, and concise. Think like a trader, not an academic. You MUST respond with valid JSON only.`;
+
+        const userPrompt = `Generate today's AI Macro Desk brief.
 
 CURRENT TIME: ${timeStr} ET, ${dayStr}
 SESSION: ${sessionNote}
@@ -390,15 +435,18 @@ ${newsContext}
 === ECONOMIC CALENDAR ===
 ${calendarContext}
 
+=== REDDIT r/Forex COMMUNITY SENTIMENT (Live trader discussions) ===
+${redditContext}
+
 === INSTRUCTIONS ===
-Use the macro indicators above to inform your analysis. Reference rate differentials (e.g. Fed vs BoJ), inflation divergences, and growth outlooks when explaining currency flows. Cross-reference headlines and calendar events with the underlying macro data.
+Use the macro indicators above to inform your analysis. Reference rate differentials (e.g. Fed vs BoJ), inflation divergences, and growth outlooks when explaining currency flows. Cross-reference headlines and calendar events with the underlying macro data. If Reddit community sentiment shows strong positioning or notable narratives, mention them briefly.
 
 Respond with ONLY this JSON (no markdown, no code fences, no explanation):
 
-{"bias":"<Risk-on | Risk-off | Neutral | Risk-on (tactical) | Risk-off (tactical)>","bullets":["<USD/rates/Fed — reference actual rate, CPI trend>","<EUR macro — reference ECB rate, eurozone inflation/growth>","<GBP macro — reference BoE rate, UK inflation/growth>","<JPY/BoJ — reference BoJ rate, carry trade dynamics>","<Key risk event + liquidity/positioning — 1 sentence>"],"notes":"<1-2 sentence tactical takeaway referencing rate differentials or macro divergences>"}`;
+{"bias":"<Risk-on | Risk-off | Neutral | Risk-on (tactical) | Risk-off (tactical)>","bullets":["<USD/rates/Fed — reference actual rate, CPI trend>","<EUR macro — reference ECB rate, eurozone inflation/growth>","<GBP macro — reference BoE rate, UK inflation/growth>","<JPY/BoJ — reference BoJ rate, carry trade dynamics>","<Key risk event + community sentiment/positioning — 1 sentence>"],"notes":"<1-2 sentence tactical takeaway referencing rate differentials or macro divergences>","communitySentiment":"<1 sentence synthesising the overall mood from r/Forex Reddit posts — dominant bias, notable pair mentions, crowd positioning. If no Reddit data was available say 'No community data.'>"}`;
 
         // Try models in order until one works
-        let parsed: { bias: string; bullets: string[]; notes: string } | null = null;
+        let parsed: { bias: string; bullets: string[]; notes: string; communitySentiment: string } | null = null;
 
         const modelsToTry = [
             primaryModel,
@@ -432,14 +480,15 @@ Respond with ONLY this JSON (no markdown, no code fences, no explanation):
             return fallback;
         }
 
-    const responseData: MacroDeskResponse = macroDeskResponseSchema.parse({
-        title: "AI Macro Desk",
-        bias: parsed.bias,
-        bullets: parsed.bullets.slice(0, 5),
-        notes: parsed.notes || "",
-        cached: false,
-        generatedAt: now.toISOString(),
-    });
+        const responseData: MacroDeskResponse = macroDeskResponseSchema.parse({
+            title: "AI Macro Desk",
+            bias: parsed.bias,
+            bullets: parsed.bullets.slice(0, 5),
+            notes: parsed.notes || "",
+            communitySentiment: parsed.communitySentiment || "",
+            cached: false,
+            generatedAt: now.toISOString(),
+        });
 
         // Store in cache
         cache = {

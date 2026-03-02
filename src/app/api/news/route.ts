@@ -51,8 +51,18 @@ const FEEDS = [
 let cache: { fetchedAt: number; headlines: Headline[] } | undefined;
 let inflight: Promise<Headline[]> | undefined;
 const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
-const MAX_PER_TOPIC = 5;
-const DASHBOARD_HEADLINES_LIMIT = 10;
+const MAX_PER_TOPIC = 6;
+const TOTAL_LIMIT = 25;
+
+/* ── Quality filter — skip clickbait / non-market headlines ── */
+const SKIP_PATTERNS = [
+    /\b(quiz|horoscope|celebrity|sport|football|nba|nfl|recipe|travel|fashion|lifestyle|opinion|sponsored|partner content|advertis|podcast episode)\b/i,
+    /\b(best \d+ |top \d+ things|you won't believe|this is why|here's why|what you need to know)\b/i,
+];
+
+function isQualityHeadline(title: string): boolean {
+    return !SKIP_PATTERNS.some((re) => re.test(title));
+}
 
 const CACHE_HEADERS = {
     "Cache-Control": "private, max-age=0, s-maxage=120, stale-while-revalidate=300",
@@ -118,7 +128,7 @@ async function fetchFeed(feedUrl: string, feedSource: string): Promise<Headline[
 
         // Split by <item> tags
         const parts = xml.split("<item>");
-        for (let i = 1; i < parts.length && items.length < 15; i++) {
+        for (let i = 1; i < parts.length && items.length < 25; i++) {
             const block = parts[i];
             const endIdx = block.indexOf("</item>");
             const item = endIdx === -1 ? block : block.substring(0, endIdx);
@@ -155,10 +165,10 @@ export async function GET() {
     if (cache && Date.now() - cache.fetchedAt < CACHE_TTL) {
         return NextResponse.json(
             {
-            headlines: cache.headlines,
-            cached: true,
-            count: cache.headlines.length,
-            generatedAt: new Date(cache.fetchedAt).toISOString(),
+                headlines: cache.headlines,
+                cached: true,
+                count: cache.headlines.length,
+                generatedAt: new Date(cache.fetchedAt).toISOString(),
             },
             { headers: CACHE_HEADERS },
         );
@@ -188,38 +198,41 @@ export async function GET() {
         const seen = new Set<string>();
         const unique: Headline[] = [];
 
-    for (const h of allHeadlines) {
-        // Simple dedup: first 40 chars lowercase
-        const key = h.title.substring(0, 40).toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
-        unique.push(h);
-    }
+        for (const h of allHeadlines) {
+            // Simple dedup: first 40 chars lowercase
+            const key = h.title.substring(0, 40).toLowerCase();
+            if (seen.has(key)) continue;
+            seen.add(key);
+            unique.push(h);
+        }
 
-    // Sort newest first
-    unique.sort(
-        (a, b) =>
-            new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
-    );
+        // Quality filter — remove clickbait / non-market headlines
+        const qualified = unique.filter((h) => isQualityHeadline(h.title));
 
-    // Balance by topic first (max 5 per topic), then keep top 10 overall
-    const topicCounts = new Map<string, number>();
-    const balanced: Headline[] = [];
+        // Sort newest first
+        qualified.sort(
+            (a, b) =>
+                new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+        );
 
-    for (const h of unique) {
-        const topic = h.topic || "FX";
-        const count = topicCounts.get(topic) ?? 0;
-        if (count >= MAX_PER_TOPIC) continue;
-        topicCounts.set(topic, count + 1);
-        balanced.push(h);
-    }
+        // Balance by topic (max per topic), then keep top TOTAL_LIMIT
+        const topicCounts = new Map<string, number>();
+        const balanced: Headline[] = [];
 
-        const headlines = balanced.slice(0, DASHBOARD_HEADLINES_LIMIT);
+        for (const h of qualified) {
+            const topic = h.topic || "FX";
+            const count = topicCounts.get(topic) ?? 0;
+            if (count >= MAX_PER_TOPIC) continue;
+            topicCounts.set(topic, count + 1);
+            balanced.push(h);
+        }
 
-    // Refresh ago values
-    for (const h of headlines) {
-        h.ago = timeAgo(h.publishedAt);
-    }
+        const headlines = balanced.slice(0, TOTAL_LIMIT);
+
+        // Refresh ago values
+        for (const h of headlines) {
+            h.ago = timeAgo(h.publishedAt);
+        }
 
         cache = { fetchedAt: Date.now(), headlines };
         return headlines;

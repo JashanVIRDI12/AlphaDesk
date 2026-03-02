@@ -18,6 +18,26 @@ type UpdateItem = {
 
 const UPDATES: UpdateItem[] = [
   {
+    date: "2026-03-02",
+    title: "Dedicated Instrument Pages · Reddit AI Pillar · Layout Overhaul",
+    improved: [
+      "Launched dedicated analysis pages for each currency pair (EURUSD, GBPUSD, USDJPY, XAUUSD) at /dashboard/instruments/[pair] — full 1H TradingView advanced chart, all four AI pillars, share-to-story card, and a live Refresh AI button.",
+      "Dashboard instrument section redesigned as a compact summary list — each row shows the AI bias, conviction ring, and a one-line takeaway. Tap any row to go to the full analysis page.",
+      "Added Reddit Sentiment as a dedicated fourth AI pillar alongside News Driver, Technical Levels, and Macro Backdrop. The AI synthesises what r/Forex traders are discussing about each pair and surfaces it as a structured insight — not raw posts.",
+      "Macro Desk brief now includes a Community Pulse section — the AI's synthesis of overall r/Forex trader mood and positioning, shown inside the Desk Summary card.",
+      "Reddit data feeds AI analysis silently in the backend for both the instruments and macro desk APIs. No raw post feed is shown in the UI — only the AI-digested insight.",
+      "Added an Exit Dashboard button in the top-right header — subtle ghost style, turns rose-red on hover, takes you back to the homepage without signing out.",
+      "Dashboard sidebar simplified to Volatility panel only — cleaner, less noise.",
+      "Exit button added on the dedicated instrument page (← Dashboard breadcrumb) with a sticky nav bar showing pair breadcrumb and Refresh AI.",
+      "Launched a dedicated News page at /dashboard/news — hero featured card, 3-column grid layout, per-topic colour coding (USD · EUR · GBP · JPY · Geopolitics · FX), live search, and a High Impact toggle.",
+      "News feed now fetches up to 25 quality-filtered articles (was 10). Clickbait, opinion, lifestyle, and non-market headlines are automatically removed before display.",
+      "Live News in the Macro Desk now shows only the top 8 headlines with a 'View all' link to the full news page.",
+    ],
+    removed: [
+      "Removed the old instrument card grid from the main dashboard — replaced by the new compact summary list.",
+    ],
+  },
+  {
     date: "2026-02-27",
     title: "AlphaDesk PRO: Institutional Upgrade",
     improved: [

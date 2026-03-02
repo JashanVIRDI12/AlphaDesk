@@ -13,6 +13,7 @@ import {
   TrendingDown,
   ArrowUpRight,
   ArrowDownRight,
+  MessageCircle,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ export type InstrumentData = {
   newsDriver?: string;
   technicalLevels?: string;
   macroBackdrop?: string;
+  redditSentiment?: string;
 };
 
 function compactText(input?: string, limit = 78): string {
@@ -455,6 +457,14 @@ function InstrumentDetailModal({
       color: "text-amber-400",
       borderColor: "border-amber-500/10",
       bgColor: "bg-amber-500/[0.03]",
+    },
+    {
+      icon: MessageCircle,
+      label: "REDDIT SENTIMENT",
+      content: instrument.redditSentiment,
+      color: "text-orange-400",
+      borderColor: "border-orange-500/10",
+      bgColor: "bg-orange-500/[0.03]",
     },
   ];
 
