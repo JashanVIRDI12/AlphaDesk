@@ -177,7 +177,8 @@ function AnimatedBadge() {
             transition={{ duration: 0.7, delay: 0.1, ease: [0.23, 1, 0.32, 1] }}
         >
             <motion.div
-                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-indigo-500/20 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 px-4 py-1.5 backdrop-blur-xl"
+                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full border bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 px-4 py-1.5 backdrop-blur-xl"
+                initial={{ borderColor: "rgba(99, 102, 241, 0.2)" }}
                 whileHover={{ scale: 1.02, borderColor: "rgba(99, 102, 241, 0.3)" }}
                 transition={{ duration: 0.2 }}
             >
@@ -199,7 +200,7 @@ function AnimatedBadge() {
 // Split text animation component
 function SplitText({ text, className }: { text: string; className?: string }) {
     const words = text.split(" ");
-    
+
     return (
         <motion.span className={className}>
             {words.map((word, i) => (
@@ -223,7 +224,7 @@ function SplitText({ text, className }: { text: string; className?: string }) {
 
 export function HeroSection() {
     const [mounted, setMounted] = useState(false);
-    
+
     useEffect(() => {
         setMounted(true);
     }, []);
@@ -236,7 +237,7 @@ export function HeroSection() {
 
                 {/* Headline with dramatic typography */}
                 <div className="relative text-center">
-                    <motion.h1 
+                    <motion.h1
                         className="mx-auto max-w-5xl text-[clamp(3rem,7vw,6.5rem)] font-bold leading-[1.05] tracking-[-0.05em]"
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -299,7 +300,7 @@ export function HeroSection() {
                         <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-1 backdrop-blur-2xl shadow-2xl shadow-black/50">
                             {/* Animated gradient overlay */}
                             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-blue-500/10" />
-                            
+
                             {/* Subtle grid */}
                             <div
                                 className="absolute inset-0 opacity-[0.08]"
@@ -309,7 +310,7 @@ export function HeroSection() {
                                     backgroundSize: "50px 50px",
                                 }}
                             />
-                            
+
                             <div className="relative grid grid-cols-1 gap-px overflow-hidden rounded-[2rem] md:grid-cols-3">
                                 {/* Currency Pairs */}
                                 <div className="bg-black/40 p-8 text-center backdrop-blur-xl">

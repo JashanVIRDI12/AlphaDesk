@@ -12,8 +12,8 @@ const nextConfig: NextConfig = {
       "font-src 'self' data:",
       "style-src 'self' 'unsafe-inline'",
       // TradingView widget injects inline scripts; keep compatible.
-      "script-src 'self' 'unsafe-inline' https://s3.tradingview.com",
-      "connect-src 'self' https:",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://s3.tradingview.com https://www.googletagmanager.com https://va.vercel-scripts.com",
+      "connect-src 'self' https: wss: ws:",
       "frame-src https://s.tradingview.com https://www.tradingview.com",
     ].join("; ");
 
