@@ -6,6 +6,7 @@ import { CtaSection } from "@/components/landing/cta-section";
 import { LandingFooter } from "@/components/landing/landing-footer";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { StructuredData } from "@/app/schema";
+import { NewToolPopup } from "@/components/landing/new-tool-popup";
 
 export const metadata: Metadata = {
     title: "AI Forex Trading Terminal — Real-Time Currency Analysis & FX Signals",
@@ -23,6 +24,7 @@ export default function HomePage() {
     return (
         <>
             <StructuredData />
+            <NewToolPopup />
             <div className="min-h-screen bg-[#06060a] text-zinc-100 overflow-x-hidden">
                 <LandingNav />
                 <HeroSection />

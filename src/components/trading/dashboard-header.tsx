@@ -8,20 +8,12 @@ import Link from "next/link";
 import { TrendingUp, LogOut } from "lucide-react";
 
 import { AuthControls } from "@/components/auth/auth-controls";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { TopStatusStrip } from "@/components/trading/top-status-strip";
 import { NewsTicker } from "@/components/trading/news-ticker";
 import type { MarketSession } from "@/data/market";
 
 export function DashboardHeader({ sessions }: { sessions: MarketSession[] }) {
   const { data: session } = useSession();
-  const name = session?.user?.name ?? "";
-  const initials = name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p: string) => p[0]?.toUpperCase())
-    .join("") || "HF";
 
   return (
     <header className="sticky top-0 z-30 relative border-b border-white/10 bg-[#0c0c0e] backdrop-blur-2xl">
@@ -35,13 +27,10 @@ export function DashboardHeader({ sessions }: { sessions: MarketSession[] }) {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <div className="text-[12px] font-semibold tracking-tight">AlphaDesk</div>
-              <span className="rounded bg-white/[0.03] px-1.5 py-0.5 text-[8px] font-semibold tracking-[0.18em] text-zinc-400">
-                PRO
+              <div className="text-[12px] font-semibold tracking-tight">gettradingbias</div>
+              <span className="rounded border border-indigo-500/20 bg-indigo-500/10 px-1.5 py-0.5 text-[8px] font-bold tracking-[0.18em] text-indigo-400">
+                BETA
               </span>
-            </div>
-            <div className="hidden text-[9px] font-medium tracking-wide text-zinc-600 sm:block">
-              INSTITUTIONAL TERMINAL
             </div>
           </div>
         </Link>
@@ -50,10 +39,8 @@ export function DashboardHeader({ sessions }: { sessions: MarketSession[] }) {
         <div className="flex-1 flex w-full justify-center order-last pt-3 pb-1 border-t border-white/[0.06] lg:order-none lg:w-auto lg:py-0 lg:border-none">
           <TopStatusStrip sessions={sessions} />
         </div>
-
         {/* Right: Exit + Auth + Avatar */}
         <div className="flex items-center justify-end gap-2 w-max">
-
           {/* Exit Dashboard */}
           <Link
             href="/"
@@ -64,12 +51,6 @@ export function DashboardHeader({ sessions }: { sessions: MarketSession[] }) {
           </Link>
 
           <AuthControls />
-
-          <Avatar className="ml-0.5 h-8 w-8 ring-1 ring-white/10">
-            <AvatarFallback className="bg-white/[0.04] text-[10px] font-medium">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
         </div>
       </div>
 

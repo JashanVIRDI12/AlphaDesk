@@ -1,3 +1,6 @@
+"use client";
+
+import { motion, Variants } from "framer-motion";
 import { getMockMarketData } from "@/data/market";
 
 import { AuthGate } from "@/components/auth/auth-gate";
@@ -10,6 +13,30 @@ import { SectionHeader } from "@/components/trading/section-header";
 import { VolatilityPanel } from "@/components/trading/volatility-panel";
 import { InstrumentsSummary } from "@/components/trading/instruments-summary";
 
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1,
+            delayChildren: 0.1,
+        },
+    },
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    show: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            type: "spring",
+            stiffness: 300,
+            damping: 24
+        }
+    },
+};
+
 export default function Dashboard() {
     const data = getMockMarketData();
 
@@ -18,10 +45,15 @@ export default function Dashboard() {
             <AuthGate>
                 <DashboardHeader sessions={data.sessions} />
 
-                <main className="mx-auto w-full max-w-[1600px] px-3 py-4 sm:px-5 sm:py-6 md:px-7 md:py-8">
+                <motion.main
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="show"
+                    className="mx-auto w-full max-w-[1600px] px-3 py-4 sm:px-5 sm:py-6 md:px-7 md:py-8"
+                >
 
                     {/* Mobile quick-nav pills */}
-                    <div className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1 pt-0.5 lg:hidden">
+                    <motion.div variants={itemVariants} className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1 pt-0.5 lg:hidden">
                         {[
                             { label: "NEWS", href: "#news" },
                             { label: "PAIRS", href: "#pairs" },
@@ -35,21 +67,21 @@ export default function Dashboard() {
                                 {label}
                             </a>
                         ))}
-                    </div>
+                    </motion.div>
 
                     {/* Greeting strip */}
-                    <div className="mb-6">
+                    <motion.div variants={itemVariants} className="mb-6">
                         <Greeting
                             title={data.greeting.title}
                             subtitle={data.greeting.subtitle}
                             sessions={data.sessions}
                         />
-                    </div>
+                    </motion.div>
 
                     {/* Macro + News Desk — full width */}
-                    <div className="mb-6" id="news">
+                    <motion.div variants={itemVariants} className="mb-6" id="news">
                         <MacroPanel riskMode={data.fundamentals.riskMode} events={data.fundamentals.events} />
-                    </div>
+                    </motion.div>
 
                     {/* ═══ Main 2-column grid ═══
                         LEFT  (lg:8) — Compact instrument pair summaries (tap → full analysis page)
@@ -58,7 +90,7 @@ export default function Dashboard() {
                     <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
 
                         {/* ── LEFT: Instrument pair summaries ── */}
-                        <section className="lg:col-span-8" id="pairs">
+                        <motion.section variants={itemVariants} className="lg:col-span-8" id="pairs">
                             <SectionHeader
                                 title="Instruments"
                                 description="AI bias across major FX pairs — tap any row for full analysis"
@@ -66,10 +98,10 @@ export default function Dashboard() {
                             <div className="mt-3">
                                 <InstrumentsSummary />
                             </div>
-                        </section>
+                        </motion.section>
 
                         {/* ── RIGHT: Sticky sidebar ── */}
-                        <aside className="lg:col-span-4">
+                        <motion.aside variants={itemVariants} className="lg:col-span-4">
                             <div className="lg:sticky lg:top-24">
                                 <div id="volatility" className="scroll-mt-24">
                                     <SectionHeader
@@ -81,9 +113,9 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                             </div>
-                        </aside>
+                        </motion.aside>
                     </div>
-                </main>
+                </motion.main>
 
                 <DashboardFooter />
             </AuthGate>

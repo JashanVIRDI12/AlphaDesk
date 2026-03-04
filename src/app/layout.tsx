@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
@@ -16,6 +16,13 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Inter for premium UI typography
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -82,6 +89,25 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://gettradingbias.com"),
 };
 
+/**
+ * Viewport export — required by Next.js App Router.
+ * maximumScale: 1 prevents accidental pinch-to-zoom during chart interaction
+ * on mobile, which is critical for trading chart usability.
+ * interactiveWidget: resizes-visual-viewport ensures the chart area doesn't
+ * shrink when the mobile keyboard opens.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#06060a" },
+    { media: "(prefers-color-scheme: light)", color: "#06060a" },
+  ],
+  colorScheme: "dark",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -90,7 +116,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} antialiased`}
       >
         <GoogleAnalytics gaId="G-0RKN1FKFV5" />
         <AuthSessionProvider>

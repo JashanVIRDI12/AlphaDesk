@@ -18,6 +18,22 @@ type UpdateItem = {
 
 const UPDATES: UpdateItem[] = [
   {
+    date: "2026-03-04",
+    title: "Free Tools Hub · Instrument Page Upgrade · Faster Charts",
+    improved: [
+      "Launched a free Forex Lot Size Calculator at /tools/lot-size-calculator — enter your account balance, risk %, stop loss (pips), and currency pair and it instantly outputs standard, mini, and micro lot sizes, dollar risk, R:R ratio, and potential profit. Supports 12 pairs including EUR/USD, GBP/USD, USD/JPY, GBP/JPY, and XAU/USD (gold).",
+      "Launched a Tools hub at /tools listing all available and upcoming calculators in one place.",
+      "Trade Journal announced — a free, fully private trade log (stored in your browser, nothing sent to our servers) showing win rate, R:R ratio, equity curve, session breakdown, and an AI review mode. Currently in development.",
+      "Dedicated instrument analysis pages (/dashboard/instruments/EURUSD, GBPUSD, USDJPY, XAUUSD) now load significantly faster — the TradingView chart is now loaded in the background after the AI analysis panels appear, so you see your bias, news driver, technicals, and macro data instantly rather than waiting for the chart.",
+      "TradingView chart skeletons added — instead of a blank area while the chart loads, you now see a clean loading indicator while the chart initialises.",
+      "Added a 'Tools' link to the main navigation (desktop + mobile menu) for quick access.",
+      "Instrument pages now show breadcrumb navigation — Home → Dashboard → [SYMBOL] — making it easier to understand where you are and go back.",
+    ],
+    fixed: [
+      "Fixed a potential chart hydration issue where the TradingView widget could cause a brief visual flicker on first load.",
+    ],
+  },
+  {
     date: "2026-03-02",
     title: "Dedicated Instrument Pages · Reddit AI Pillar · Layout Overhaul",
     improved: [
@@ -87,97 +103,8 @@ const UPDATES: UpdateItem[] = [
   },
 ];
 
-function UpdateCard({ item }: { item: UpdateItem }) {
-  return (
-    <article className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-indigo-500/[0.08] via-purple-500/[0.04] to-transparent p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_18px_60px_rgba(0,0,0,0.45)]">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[16px] font-semibold tracking-tight text-zinc-100">{item.title}</h2>
-        <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] tracking-wide text-zinc-400">
-          {item.date}
-        </span>
-      </div>
-
-      <div className="space-y-4 text-[13px] leading-6 text-zinc-300">
-        <div>
-          <div className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-300">
-            <Sparkles className="h-3.5 w-3.5" />
-            Improved
-          </div>
-          <ul className="space-y-1.5">
-            {item.improved.map((line) => (
-              <li key={line} className="flex gap-2">
-                <CheckCircle2 className="mt-1 h-3.5 w-3.5 shrink-0 text-emerald-300" />
-                <span>{line}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {item.removed?.length ? (
-          <div>
-            <div className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-300">
-              <Trash2 className="h-3.5 w-3.5" />
-              Removed
-            </div>
-            <ul className="space-y-1.5">
-              {item.removed.map((line) => (
-                <li key={line} className="flex gap-2">
-                  <span className="mt-[9px] h-[3px] w-[3px] shrink-0 rounded-full bg-rose-300/70" />
-                  <span>{line}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {item.fixed?.length ? (
-          <div>
-            <div className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-300">
-              <Wrench className="h-3.5 w-3.5" />
-              Fixed
-            </div>
-            <ul className="space-y-1.5">
-              {item.fixed.map((line) => (
-                <li key={line} className="flex gap-2">
-                  <span className="mt-[9px] h-[3px] w-[3px] shrink-0 rounded-full bg-amber-300/70" />
-                  <span>{line}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-      </div>
-    </article>
-  );
-}
+import { UpdatesClient } from "./updates-client";
 
 export default function UpdatesPage() {
-  return (
-    <div className="min-h-screen bg-[#06060a] bg-[radial-gradient(1200px_620px_at_50%_-15%,rgba(129,140,248,0.14),transparent_62%),radial-gradient(900px_420px_at_0%_8%,rgba(139,92,246,0.10),transparent_60%),radial-gradient(900px_500px_at_100%_12%,rgba(99,102,241,0.10),transparent_58%)] text-zinc-100">
-      <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-        <div className="mb-6 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Changelog</p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Product Updates</h1>
-            <p className="mt-2 text-[13px] text-zinc-400">
-              Post what improved, removed, and fixed in each dashboard release.
-            </p>
-          </div>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] text-zinc-300 transition-colors hover:text-white"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Home
-          </Link>
-        </div>
-
-        <div className="space-y-4">
-          {UPDATES.map((item) => (
-            <UpdateCard key={`${item.date}-${item.title}`} item={item} />
-          ))}
-        </div>
-      </main>
-    </div>
-  );
+  return <UpdatesClient updates={UPDATES} />;
 }
