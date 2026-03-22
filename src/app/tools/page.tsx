@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Calculator, TrendingUp, ArrowRight, Zap } from "lucide-react";
+import { Calculator, TrendingUp, ArrowRight, Zap, Globe } from "lucide-react";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { LandingFooter } from "@/components/landing/landing-footer";
 
@@ -20,6 +20,19 @@ export const metadata: Metadata = {
 };
 
 const TOOLS = [
+    {
+        href: "/tools/geopolitical-risk",
+        title: "Geopolitical Risk Index",
+        description:
+            "Track historical and current geopolitical risk driven by global news, conflicts, and events. Visualize the impact from 1900 to present day.",
+        icon: Globe,
+        badge: "New",
+        badgeColor: "border-sky-500/20 bg-sky-500/10 text-sky-300",
+        glow: "bg-sky-500/[0.06]",
+        accent: "border-sky-500/10 hover:border-sky-500/20",
+        keywords: ["GPR Index", "Global News", "War & Conflicts", "Risk Sentiment"],
+        live: true,
+    },
     {
         href: "/tools/lot-size-calculator",
         title: "Lot Size Calculator",

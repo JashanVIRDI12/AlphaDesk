@@ -168,13 +168,16 @@ async function fetchMacroIndicators(baseUrl: string): Promise<string> {
     }
 }
 
-/* ── Reddit via RSS (works from Vercel datacenter IPs) ── */
+/* ── Reddit via multiple fallback strategies (Vercel IP workaround) ── */
 const MD_PAIRS = [
     { pair: "EURUSD", term: "EURUSD" },
     { pair: "GBPUSD", term: "GBPUSD" },
     { pair: "XAUUSD", term: "XAUUSD" },
     { pair: "USDJPY", term: "USDJPY" },
 ];
+
+const MD_REDDIT_UA =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
 
 function mdRssExtract(xml: string, tag: string): string {
     const cdataOpen = `<${tag}><![CDATA[`;
@@ -193,34 +196,81 @@ function mdRssAgo(pubDate: string): string {
     return diff < 60 ? `${diff}m` : diff < 1440 ? `${Math.floor(diff / 60)}h` : `${Math.floor(diff / 1440)}d`;
 }
 
-async function mdFetchPairRSS(term: string, pair: string): Promise<{ pair: string; title: string; ago: string }[]> {
-    try {
-        const url = `https://www.reddit.com/r/Forex/search.rss?q=${encodeURIComponent(term)}&sort=new&restrict_sr=on&t=week`;
-        const res = await fetch(url, {
-            headers: {
-                "User-Agent": "Mozilla/5.0 (compatible; GetTradingBias/2.0; +https://gettradingbias.com)",
-                "Accept": "application/rss+xml, application/xml, text/xml",
-            },
-            signal: AbortSignal.timeout(8000),
-        });
-        if (!res.ok) return [];
-        const xml = await res.text();
-        const items: { pair: string; title: string; ago: string }[] = [];
-        const parts = xml.split("<entry>");
-        for (let i = 1; i < parts.length && items.length < 5; i++) {
-            const block = parts[i].split("</entry>")[0];
-            const title = mdRssExtract(block, "title");
-            const updated = mdRssExtract(block, "updated") || mdRssExtract(block, "published");
-            if (!title || title.length < 5) continue;
-            items.push({ pair, title: title.substring(0, 100), ago: updated ? mdRssAgo(updated) : "?" });
+type MdRedditPost = { pair: string; title: string; ago: string };
+
+function mdParseRSSEntries(xml: string, pair: string): MdRedditPost[] {
+    const items: MdRedditPost[] = [];
+    const parts = xml.split("<entry>");
+    for (let i = 1; i < parts.length && items.length < 5; i++) {
+        const block = parts[i].split("</entry>")[0];
+        const title = mdRssExtract(block, "title");
+        const updated = mdRssExtract(block, "updated") || mdRssExtract(block, "published");
+        if (!title || title.length < 5) continue;
+        items.push({ pair, title: title.substring(0, 100), ago: updated ? mdRssAgo(updated) : "?" });
+    }
+    return items;
+}
+
+async function mdRedditRSS_Old(term: string, pair: string): Promise<MdRedditPost[]> {
+    const url = `https://old.reddit.com/r/Forex/search.rss?q=${encodeURIComponent(term)}&sort=new&restrict_sr=on&t=week`;
+    const res = await fetch(url, {
+        headers: { "User-Agent": MD_REDDIT_UA, "Accept": "application/rss+xml, application/xml, text/xml" },
+        signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error(`old.reddit RSS ${res.status}`);
+    return mdParseRSSEntries(await res.text(), pair);
+}
+
+async function mdRedditRSS_Www(term: string, pair: string): Promise<MdRedditPost[]> {
+    const url = `https://www.reddit.com/r/Forex/search.rss?q=${encodeURIComponent(term)}&sort=new&restrict_sr=on&t=week`;
+    const res = await fetch(url, {
+        headers: { "User-Agent": MD_REDDIT_UA, "Accept": "application/rss+xml, application/xml, text/xml" },
+        signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error(`www.reddit RSS ${res.status}`);
+    return mdParseRSSEntries(await res.text(), pair);
+}
+
+async function mdRedditJSON_Old(term: string, pair: string): Promise<MdRedditPost[]> {
+    const url = `https://old.reddit.com/r/Forex/search.json?q=${encodeURIComponent(term)}&sort=new&restrict_sr=1&limit=10&t=week`;
+    const res = await fetch(url, {
+        headers: { "User-Agent": MD_REDDIT_UA, "Accept": "application/json" },
+        signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error(`old.reddit JSON ${res.status}`);
+    const json = await res.json();
+    const children: any[] = json?.data?.children ?? [];
+    return children.slice(0, 5).map((child: any) => {
+        const d = child.data;
+        const publishedAt = new Date((d.created_utc ?? 0) * 1000).toISOString();
+        return { pair, title: (d.title ?? "").substring(0, 100), ago: mdRssAgo(publishedAt) };
+    }).filter((p) => p.title.length >= 5);
+}
+
+async function mdFetchPairWithFallback(term: string, pair: string): Promise<MdRedditPost[]> {
+    const strategies = [
+        { name: "old.reddit RSS", fn: () => mdRedditRSS_Old(term, pair) },
+        { name: "www.reddit RSS", fn: () => mdRedditRSS_Www(term, pair) },
+        { name: "old.reddit JSON", fn: () => mdRedditJSON_Old(term, pair) },
+    ];
+    for (const strat of strategies) {
+        try {
+            const items = await strat.fn();
+            if (items.length > 0) {
+                console.log(`[macro-desk][reddit] ${pair} ✓ ${strat.name} → ${items.length} posts`);
+                return items;
+            }
+        } catch (err) {
+            console.log(`[macro-desk][reddit] ${pair} ✗ ${strat.name}: ${err instanceof Error ? err.message : "unknown"}`);
         }
-        return items;
-    } catch { return []; }
+    }
+    console.log(`[macro-desk][reddit] ${pair} — all strategies failed`);
+    return [];
 }
 
 async function fetchRedditContext(_baseUrl: string): Promise<string> {
     try {
-        const results = await Promise.all(MD_PAIRS.map(({ pair, term }) => mdFetchPairRSS(term, pair)));
+        const results = await Promise.all(MD_PAIRS.map(({ pair, term }) => mdFetchPairWithFallback(term, pair)));
         const allPosts = results.flat();
         if (allPosts.length === 0) return "Reddit data is temporarily unavailable.";
 

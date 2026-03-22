@@ -38,7 +38,7 @@ let inflight: Promise<RedditPost[]> | undefined;
 const CACHE_TTL = 5 * 60 * 1000;
 
 const REDDIT_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (web; GetTradingBias/1.0 contact: admin@gettradingbias.com)",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
     "Accept": "application/json",
 };
 
@@ -92,7 +92,23 @@ async function fetchRedditJSON(url: string): Promise<any[]> {
             signal: AbortSignal.timeout(8000),
             next: { revalidate: 0 },
         });
-        if (!res.ok) return [];
+        if (!res.ok) {
+            // Try old.reddit.com as fallback
+            const oldUrl = url.replace("www.reddit.com", "old.reddit.com");
+            if (oldUrl !== url) {
+                console.log(`[reddit] www.reddit.com returned ${res.status}, trying old.reddit.com`);
+                const oldRes = await fetch(oldUrl, {
+                    headers: REDDIT_HEADERS,
+                    signal: AbortSignal.timeout(8000),
+                    next: { revalidate: 0 },
+                });
+                if (oldRes.ok) {
+                    const oldJson = await oldRes.json();
+                    return oldJson?.data?.children ?? [];
+                }
+            }
+            return [];
+        }
         const json = await res.json();
         return json?.data?.children ?? [];
     } catch {

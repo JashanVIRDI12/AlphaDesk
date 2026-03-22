@@ -614,8 +614,11 @@ async function fetchCalendarContext(baseUrl: string): Promise<string> {
    trader positioning signals, and recent narrative.
    ──────────────────────────────────────────────────────────────────── */
 /* ───────────────────────────────────────────────────────────────────
-   Reddit via RSS  — RSS XML is NOT subject to the JSON API rate-limit
-   that Vercel datacenter IPs hit. Works reliably in production.
+   Reddit via multiple fallback strategies — Vercel datacenter IPs
+   are often blocked by Reddit. We try:
+   1. old.reddit.com RSS  (least blocked)
+   2. www.reddit.com RSS  (sometimes works)
+   3. old.reddit.com JSON (final fallback)
    ─────────────────────────────────────────────────────────────────── */
 const INSTR_REDDIT_PAIRS = [
     { pair: "EURUSD", term: "EURUSD" },
@@ -623,6 +626,10 @@ const INSTR_REDDIT_PAIRS = [
     { pair: "XAUUSD", term: "XAUUSD" },
     { pair: "USDJPY", term: "USDJPY" },
 ];
+
+/* Realistic browser UA — Reddit blocks bot-like User-Agents from datacenter IPs */
+const REDDIT_BROWSER_UA =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
 
 function rssExtract(xml: string, tag: string): string {
     const open = `<${tag}>`;
@@ -649,38 +656,89 @@ function rssTimeAgo(pubDate: string): string {
     return `${Math.floor(diff / 1440)}d`;
 }
 
-async function redditSearchRSS(term: string, pair: string): Promise<{ pair: string; title: string; ago: string }[]> {
-    try {
-        // Reddit RSS search — works from Vercel IPs unlike the JSON API
-        const url = `https://www.reddit.com/r/Forex/search.rss?q=${encodeURIComponent(term)}&sort=new&restrict_sr=on&t=week`;
-        const res = await fetch(url, {
-            headers: {
-                "User-Agent": "Mozilla/5.0 (compatible; GetTradingBias/2.0; +https://gettradingbias.com)",
-                "Accept": "application/rss+xml, application/xml, text/xml",
-            },
-            signal: AbortSignal.timeout(8000),
-        });
-        if (!res.ok) return [];
-        const xml = await res.text();
-        const items: { pair: string; title: string; ago: string }[] = [];
-        const parts = xml.split("<entry>");
-        for (let i = 1; i < parts.length && items.length < 5; i++) {
-            const block = parts[i].split("</entry>")[0];
-            const title = rssExtract(block, "title");
-            const updated = rssExtract(block, "updated") || rssExtract(block, "published");
-            if (!title || title.length < 5) continue;
-            items.push({ pair, title: title.substring(0, 120), ago: updated ? rssTimeAgo(updated) : "?" });
-        }
-        return items;
-    } catch {
-        return [];
+type RedditPostItem = { pair: string; title: string; ago: string };
+
+/* Strategy 1: RSS via old.reddit.com (often less blocked) */
+async function redditRSS_Old(term: string, pair: string): Promise<RedditPostItem[]> {
+    const url = `https://old.reddit.com/r/Forex/search.rss?q=${encodeURIComponent(term)}&sort=new&restrict_sr=on&t=week`;
+    const res = await fetch(url, {
+        headers: { "User-Agent": REDDIT_BROWSER_UA, "Accept": "application/rss+xml, application/xml, text/xml" },
+        signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error(`old.reddit RSS ${res.status}`);
+    const xml = await res.text();
+    return parseRSSEntries(xml, pair);
+}
+
+/* Strategy 2: RSS via www.reddit.com */
+async function redditRSS_Www(term: string, pair: string): Promise<RedditPostItem[]> {
+    const url = `https://www.reddit.com/r/Forex/search.rss?q=${encodeURIComponent(term)}&sort=new&restrict_sr=on&t=week`;
+    const res = await fetch(url, {
+        headers: { "User-Agent": REDDIT_BROWSER_UA, "Accept": "application/rss+xml, application/xml, text/xml" },
+        signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error(`www.reddit RSS ${res.status}`);
+    const xml = await res.text();
+    return parseRSSEntries(xml, pair);
+}
+
+/* Strategy 3: JSON API via old.reddit.com */
+async function redditJSON_Old(term: string, pair: string): Promise<RedditPostItem[]> {
+    const url = `https://old.reddit.com/r/Forex/search.json?q=${encodeURIComponent(term)}&sort=new&restrict_sr=1&limit=10&t=week`;
+    const res = await fetch(url, {
+        headers: { "User-Agent": REDDIT_BROWSER_UA, "Accept": "application/json" },
+        signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error(`old.reddit JSON ${res.status}`);
+    const json = await res.json();
+    const children: any[] = json?.data?.children ?? [];
+    return children.slice(0, 5).map((child: any) => {
+        const d = child.data;
+        const publishedAt = new Date((d.created_utc ?? 0) * 1000).toISOString();
+        return { pair, title: (d.title ?? "").substring(0, 120), ago: rssTimeAgo(publishedAt) };
+    }).filter((p) => p.title.length >= 5);
+}
+
+function parseRSSEntries(xml: string, pair: string): RedditPostItem[] {
+    const items: RedditPostItem[] = [];
+    const parts = xml.split("<entry>");
+    for (let i = 1; i < parts.length && items.length < 5; i++) {
+        const block = parts[i].split("</entry>")[0];
+        const title = rssExtract(block, "title");
+        const updated = rssExtract(block, "updated") || rssExtract(block, "published");
+        if (!title || title.length < 5) continue;
+        items.push({ pair, title: title.substring(0, 120), ago: updated ? rssTimeAgo(updated) : "?" });
     }
+    return items;
+}
+
+/* Try all strategies in order until one works for a given pair */
+async function redditSearchWithFallback(term: string, pair: string): Promise<RedditPostItem[]> {
+    const strategies = [
+        { name: "old.reddit RSS", fn: () => redditRSS_Old(term, pair) },
+        { name: "www.reddit RSS", fn: () => redditRSS_Www(term, pair) },
+        { name: "old.reddit JSON", fn: () => redditJSON_Old(term, pair) },
+    ];
+
+    for (const strat of strategies) {
+        try {
+            const items = await strat.fn();
+            if (items.length > 0) {
+                console.log(`[instruments][reddit] ${pair} ✓ ${strat.name} → ${items.length} posts`);
+                return items;
+            }
+        } catch (err) {
+            console.log(`[instruments][reddit] ${pair} ✗ ${strat.name}: ${err instanceof Error ? err.message : "unknown"}`);
+        }
+    }
+    console.log(`[instruments][reddit] ${pair} — all strategies failed`);
+    return [];
 }
 
 async function fetchRedditContext(_baseUrl: string): Promise<string> {
     try {
         const results = await Promise.all(
-            INSTR_REDDIT_PAIRS.map(({ pair, term }) => redditSearchRSS(term, pair))
+            INSTR_REDDIT_PAIRS.map(({ pair, term }) => redditSearchWithFallback(term, pair))
         );
         const allPosts = results.flat();
         if (allPosts.length === 0) return "Reddit data is temporarily unavailable.";
