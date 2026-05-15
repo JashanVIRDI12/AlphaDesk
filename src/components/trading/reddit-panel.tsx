@@ -188,13 +188,19 @@ export function RedditPanel() {
 
                     <div className="flex items-center gap-2">
                         {!isLoading && !error && (
-                            <div className="flex items-center gap-1 rounded-full border border-orange-500/10 bg-orange-500/[0.04] px-2 py-0.5">
-                                <div className="relative h-1.5 w-1.5">
-                                    <div className="absolute inset-0 animate-ping rounded-full bg-orange-400/50" style={{ animationDuration: "2s" }} />
-                                    <div className="relative h-1 w-1 rounded-full bg-orange-400" />
+                            data?.aiSearched ? (
+                                <div className="flex items-center gap-1 rounded-full border border-blue-500/10 bg-blue-500/[0.04] px-2 py-0.5">
+                                    <span className="text-[8px] font-bold uppercase tracking-widest text-blue-400">AI Search</span>
                                 </div>
-                                <span className="text-[8px] font-bold uppercase tracking-widest text-orange-400">Live</span>
-                            </div>
+                            ) : (
+                                <div className="flex items-center gap-1 rounded-full border border-orange-500/10 bg-orange-500/[0.04] px-2 py-0.5">
+                                    <div className="relative h-1.5 w-1.5">
+                                        <div className="absolute inset-0 animate-ping rounded-full bg-orange-400/50" style={{ animationDuration: "2s" }} />
+                                        <div className="relative h-1 w-1 rounded-full bg-orange-400" />
+                                    </div>
+                                    <span className="text-[8px] font-bold uppercase tracking-widest text-orange-400">Live</span>
+                                </div>
+                            )
                         )}
                         <button
                             onClick={() => refetch()}

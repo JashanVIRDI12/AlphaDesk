@@ -260,6 +260,7 @@ type RedditResponse = {
   posts: RedditPost[];
   count: number;
   cached: boolean;
+  aiSearched?: boolean;
 };
 
 export function useRedditPosts() {

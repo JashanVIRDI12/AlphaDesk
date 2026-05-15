@@ -735,25 +735,93 @@ async function redditSearchWithFallback(term: string, pair: string): Promise<Red
     return [];
 }
 
+function formatRedditPosts(allPosts: RedditPostItem[]): string {
+    const byPair: Record<string, typeof allPosts> = {};
+    for (const p of allPosts) {
+        if (!byPair[p.pair]) byPair[p.pair] = [];
+        if (byPair[p.pair].length < 3) byPair[p.pair].push(p);
+    }
+    const sections: string[] = [];
+    for (const [pair, posts] of Object.entries(byPair)) {
+        const lines = posts.map((p) => `  · [${p.ago}] ${p.title}`);
+        sections.push(`${pair}:\n${lines.join("\n")}`);
+    }
+    return sections.join("\n\n");
+}
+
+/* OpenRouter Perplexity fallback — used when Reddit direct access is blocked */
+async function fetchRedditSentimentViaOpenRouter(apiKey: string): Promise<string> {
+    console.log("[instruments][reddit] Trying OpenRouter Perplexity search fallback...");
+    try {
+        const pairsStr = INSTR_REDDIT_PAIRS.map((p) => p.pair).join(", ");
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${apiKey}`,
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://gettradingbias.com",
+                "X-Title": "GetTradingBias",
+            },
+            body: JSON.stringify({
+                model: "perplexity/sonar",
+                messages: [
+                    {
+                        role: "user",
+                        content: `Search reddit.com/r/Forex for the most recent posts from the last 7 days about ${pairsStr}. For each pair, list up to 3 recent post titles with their approximate age. Format exactly like this (no extra text):
+
+EURUSD:
+  · [2h] Post title here
+  · [5h] Another post title
+
+GBPUSD:
+  · [1h] Post title here
+
+USDJPY:
+  · [3h] Post title here
+
+XAUUSD:
+  · [4h] Post title here`,
+                    },
+                ],
+                max_tokens: 600,
+                temperature: 0.2,
+            }),
+            signal: AbortSignal.timeout(20000),
+        });
+
+        if (!res.ok) {
+            console.log(`[instruments][reddit] OpenRouter Perplexity HTTP ${res.status}`);
+            return "Reddit data temporarily unavailable.";
+        }
+        const json = await res.json();
+        const text = (json.choices?.[0]?.message?.content ?? "").trim();
+        if (!text) return "Reddit data temporarily unavailable.";
+        console.log("[instruments][reddit] ✓ OpenRouter Perplexity fallback succeeded");
+        return text;
+    } catch (err) {
+        console.log(`[instruments][reddit] OpenRouter Perplexity failed: ${err instanceof Error ? err.message : "unknown"}`);
+        return "Reddit data temporarily unavailable.";
+    }
+}
+
 async function fetchRedditContext(_baseUrl: string): Promise<string> {
     try {
         const results = await Promise.all(
             INSTR_REDDIT_PAIRS.map(({ pair, term }) => redditSearchWithFallback(term, pair))
         );
         const allPosts = results.flat();
-        if (allPosts.length === 0) return "Reddit data is temporarily unavailable.";
 
-        const byPair: Record<string, typeof allPosts> = {};
-        for (const p of allPosts) {
-            if (!byPair[p.pair]) byPair[p.pair] = [];
-            if (byPair[p.pair].length < 3) byPair[p.pair].push(p);
+        if (allPosts.length > 0) {
+            return formatRedditPosts(allPosts);
         }
-        const sections: string[] = [];
-        for (const [pair, posts] of Object.entries(byPair)) {
-            const lines = posts.map((p) => `  · [${p.ago}] ${p.title}`);
-            sections.push(`${pair}:\n${lines.join("\n")}`);
+
+        // All direct Reddit strategies failed — try OpenRouter Perplexity web search
+        const apiKey = process.env.OPENROUTER_API_KEY;
+        if (apiKey) {
+            return await fetchRedditSentimentViaOpenRouter(apiKey);
         }
-        return sections.join("\n\n");
+
+        return "Reddit data temporarily unavailable.";
     } catch {
         return "Could not fetch Reddit data.";
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Landmark, Calendar, Brain, AlertTriangle, Check } from "lucide-react";
+import { Landmark, Calendar, Brain, AlertTriangle, Check, Zap } from "lucide-react";
 
 import type { HighImpactEvent } from "@/data/market";
 import { Badge } from "@/components/ui/badge";
@@ -147,6 +147,21 @@ function getCurrentDayAndMinutesForTz(timeZone: string): { dayKey: string; minut
   };
 }
 
+/* ── Countdown helpers ── */
+function getCountdownMins(eventTime: string, nowMinutes: number): number | null {
+  const eventMins = parseTimeToMinutes(eventTime);
+  if (eventMins === null) return null;
+  const diff = eventMins - nowMinutes;
+  return diff > 0 ? diff : null;
+}
+
+function formatCountdown(mins: number): string {
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
 const SECTION_ICONS: Record<string, string> = {
   OVERVIEW: "◆",
   SCENARIOS: "◇",
@@ -203,6 +218,44 @@ function OverviewRender({ text }: { text: string }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ── Next event banner ── */
+type CalEventLike = { time: string; title: string; impact: string };
+
+function NextEventBanner({ event, minsUntil }: { event: CalEventLike; minsUntil: number }) {
+  const urgent = minsUntil <= 30;
+  const critical = minsUntil <= 10;
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2.5 rounded-lg border px-3 py-2 transition-all duration-300",
+        critical
+          ? "border-rose-500/25 bg-rose-500/[0.06]"
+          : urgent
+            ? "border-amber-500/20 bg-amber-500/[0.04]"
+            : "border-white/[0.06] bg-white/[0.02]",
+      )}
+    >
+      <Zap
+        className={cn(
+          "h-3 w-3 shrink-0",
+          critical ? "text-rose-400" : urgent ? "text-amber-400" : "text-zinc-600",
+          critical && "animate-pulse",
+        )}
+      />
+      <span className="min-w-0 flex-1 truncate text-[10px] text-zinc-400">{event.title}</span>
+      <span
+        className={cn(
+          "shrink-0 font-mono text-[10px] font-bold tabular-nums",
+          critical ? "text-rose-400" : urgent ? "text-amber-400" : "text-zinc-500",
+        )}
+      >
+        in {formatCountdown(minsUntil)}
+      </span>
     </div>
   );
 }
@@ -374,7 +427,7 @@ export function CalendarDesk({
     }
 
     const id = window.setInterval(() => load(true), 10 * 60 * 1000);
-    const ticker = window.setInterval(() => forceFreshnessTick((v) => (v + 1) % 10_000), 60 * 1000);
+    const ticker = window.setInterval(() => forceFreshnessTick((v) => (v + 1) % 10_000), 30 * 1000);
     return () => {
       cancelled = true;
       window.clearInterval(id);
@@ -384,6 +437,18 @@ export function CalendarDesk({
 
   const effectiveEvents: CalendarEvent[] = liveEvents ?? (events as CalendarEvent[]);
   const filteredEvents = effectiveEvents;
+
+  // Find the next upcoming event (soonest one that hasn't fired yet)
+  const nextUpcomingEvent = React.useMemo(() => {
+    let soonest: { event: CalendarEvent; mins: number } | null = null;
+    for (const e of filteredEvents) {
+      const mins = getCountdownMins(e.time, nowMarker.minutes);
+      if (mins !== null && (soonest === null || mins < soonest.mins)) {
+        soonest = { event: e, mins };
+      }
+    }
+    return soonest;
+  }, [filteredEvents, nowMarker.minutes]);
 
   const runOverview = async () => {
     if (!todayKey) return;
@@ -563,6 +628,11 @@ export function CalendarDesk({
             </div>
           ) : null}
 
+          {/* Next event banner — only when there's a soonest upcoming event */}
+          {nextUpcomingEvent && (
+            <NextEventBanner event={nextUpcomingEvent.event} minsUntil={nextUpcomingEvent.mins} />
+          )}
+
           {/* Event rows */}
           {filteredEvents.length > 0 ? (
             <div className="space-y-1">
@@ -580,28 +650,70 @@ export function CalendarDesk({
                         eventMinutes <= nowMarker.minutes)
                       : false;
 
+                  const minsUntil = isCompleted
+                    ? null
+                    : getCountdownMins(e.time, nowMarker.minutes);
+
+                  const isUrgent = minsUntil !== null && minsUntil <= 30;
+                  const isCritical = minsUntil !== null && minsUntil <= 10;
+
                   return (
                     <div
                       key={`${e.time}-${e.title}`}
                       className={cn(
-                        "group flex items-center gap-2.5 rounded-lg border border-white/[0.03] bg-white/[0.01] px-3 py-2",
-                        isCompleted && "border-emerald-500/20 bg-emerald-500/[0.04]",
+                        "group flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors",
+                        isCompleted
+                          ? "border-emerald-500/20 bg-emerald-500/[0.04]"
+                          : isCritical
+                            ? "border-rose-500/15 bg-rose-500/[0.03]"
+                            : isUrgent
+                              ? "border-amber-500/10 bg-amber-500/[0.02]"
+                              : "border-white/[0.03] bg-white/[0.01]",
                       )}
                     >
-                      <span className="w-[50px] shrink-0 text-[10px] font-mono font-semibold tabular-nums text-zinc-400">
-                        {e.time}
-                      </span>
+                      {/* Time + countdown stacked */}
+                      <div className="flex w-[52px] shrink-0 flex-col gap-0.5">
+                        <span className="text-[10px] font-mono font-semibold tabular-nums text-zinc-400">
+                          {e.time}
+                        </span>
+                        {minsUntil !== null && (
+                          <span
+                            className={cn(
+                              "text-[8px] font-mono tabular-nums leading-none",
+                              isCritical
+                                ? "text-rose-400"
+                                : isUrgent
+                                  ? "text-amber-400"
+                                  : "text-zinc-600",
+                            )}
+                          >
+                            in {formatCountdown(minsUntil)}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Title + impact dot */}
                       <span className="min-w-0 flex-1 flex items-center gap-1.5 truncate text-[11px] font-medium text-zinc-300">
                         {e.impact === "High" ? (
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" title="High Impact" />
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full shrink-0",
+                              isCritical ? "bg-rose-400 animate-pulse" : "bg-rose-500",
+                            )}
+                            title="High Impact"
+                          />
                         ) : (
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Medium Impact" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" title="Medium Impact" />
                         )}
                         <span className="truncate">{e.title}</span>
                       </span>
+
+                      {/* Forecast / prev — always visible */}
                       <span className="shrink-0 text-[9px] font-mono tabular-nums text-zinc-600">
                         {e.consensus} / {e.previous}
                       </span>
+
+                      {/* Done check */}
                       <span
                         className={cn(
                           "shrink-0 rounded-full border p-0.5",
