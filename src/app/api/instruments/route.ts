@@ -786,44 +786,46 @@ XAUUSD:
                 max_tokens: 600,
                 temperature: 0.2,
             }),
-            signal: AbortSignal.timeout(20000),
+            signal: AbortSignal.timeout(8000),
         });
 
         if (!res.ok) {
             console.log(`[instruments][reddit] OpenRouter Perplexity HTTP ${res.status}`);
-            return "Reddit data temporarily unavailable.";
+            return "";
         }
         const json = await res.json();
         const text = (json.choices?.[0]?.message?.content ?? "").trim();
-        if (!text) return "Reddit data temporarily unavailable.";
+        if (!text) return "";
         console.log("[instruments][reddit] ✓ OpenRouter Perplexity fallback succeeded");
         return text;
     } catch (err) {
         console.log(`[instruments][reddit] OpenRouter Perplexity failed: ${err instanceof Error ? err.message : "unknown"}`);
-        return "Reddit data temporarily unavailable.";
+        return "";
     }
 }
 
 async function fetchRedditContext(_baseUrl: string): Promise<string> {
     try {
+        // 1. Try direct Reddit scraping first
         const results = await Promise.all(
             INSTR_REDDIT_PAIRS.map(({ pair, term }) => redditSearchWithFallback(term, pair))
         );
         const allPosts = results.flat();
-
         if (allPosts.length > 0) {
             return formatRedditPosts(allPosts);
         }
 
-        // All direct Reddit strategies failed — try OpenRouter Perplexity web search
+        // 2. Reddit blocked (datacenter IP) — try OpenRouter Perplexity web search
         const apiKey = process.env.OPENROUTER_API_KEY;
         if (apiKey) {
-            return await fetchRedditSentimentViaOpenRouter(apiKey);
+            const perplexityResult = await fetchRedditSentimentViaOpenRouter(apiKey);
+            if (perplexityResult) return perplexityResult;
         }
 
-        return "Reddit data temporarily unavailable.";
+        // 3. Both failed — return a signal for the AI to synthesize from news/technicals
+        return "REDDIT_UNAVAILABLE";
     } catch {
-        return "Could not fetch Reddit data.";
+        return "REDDIT_UNAVAILABLE";
     }
 }
 
@@ -1105,7 +1107,7 @@ For each pair, provide:
 - newsDriver: 1–2 sentences on the key news headlines driving this pair right now. Be specific — cite actual headlines.
 - technicalLevels: 1–2 sentences on 1H/4H structure — trend, momentum, key support/resistance with prices. Use the data above.
 - macroBackdrop: 1 sentence on rates/CPI/GDP framing. For XAUUSD, explicitly include DXY + US real-yield proxy + GLD ETF-flow proxy.
-- redditSentiment: 1 sentence synthesising what r/Forex traders are saying about this pair from the Reddit data above. Note dominant sentiment (bullish/bearish/mixed), any crowd-sourced key levels mentioned, or notable narratives. If no relevant posts exist for this pair, say "No significant community discussion found."
+- redditSentiment: 1 sentence on retail trader sentiment for this pair. If real Reddit posts are provided above, synthesise them (dominant sentiment, crowd-sourced levels, notable narratives). If Pillar 4 says "REDDIT_UNAVAILABLE", INSTEAD infer likely retail sentiment from the news headlines and technical data — e.g. "Retail traders likely watching [key level] after [headline]; sentiment appears [bullish/bearish/mixed] given [reason]." Never say "No significant community discussion found" — always write something useful based on available context.
 
 Respond with ONLY this JSON:
 {"instruments":[{"symbol":"<one of requested symbols>","displayName":"<matching display name>","bias":"Bullish|Bearish","confidence":65,"summary":"...","newsDriver":"...","technicalLevels":"...","macroBackdrop":"...","redditSentiment":"..."}]}
