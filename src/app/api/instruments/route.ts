@@ -1006,12 +1006,16 @@ export async function GET(req: Request) {
 
     const aiConfigured = Boolean(apiKey);
 
+    // ?bust=1 forces a fresh fetch, bypassing the server-side cache
+    const reqUrl = new URL(req.url);
+    const bust = reqUrl.searchParams.get("bust") === "1";
+
     // Cache key: date + 15-minute block
     const now = new Date();
     const quarterBlock = Math.floor(now.getMinutes() / 15);
     const cacheKey = `${now.toISOString().slice(0, 10)}-h${now.getHours()}-q${quarterBlock}`;
 
-    if (cache && cache.key === cacheKey && Date.now() - cache.fetchedAt < CACHE_TTL) {
+    if (!bust && cache && cache.key === cacheKey && Date.now() - cache.fetchedAt < CACHE_TTL) {
         return NextResponse.json(cache.data, { headers: CACHE_HEADERS });
     }
 

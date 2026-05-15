@@ -202,9 +202,24 @@ async function generateShareCard(instrument: InstrumentData): Promise<Blob> {
    MAIN CLIENT COMPONENT
    ════════════════════════════════════ */
 export function InstrumentPageClient({ symbol }: { symbol: string }) {
-    const { data, isLoading, refetch, isFetching } = useInstruments();
+    const { data, isLoading, forceRefresh } = useInstruments();
     const [sharing, setSharing] = React.useState(false);
     const [shareNote, setShareNote] = React.useState<string | null>(null);
+    const [isRefreshing, setIsRefreshing] = React.useState(false);
+    const [refreshError, setRefreshError] = React.useState(false);
+
+    const handleForceRefresh = React.useCallback(async () => {
+        setIsRefreshing(true);
+        setRefreshError(false);
+        try {
+            await forceRefresh();
+        } catch {
+            setRefreshError(true);
+            setTimeout(() => setRefreshError(false), 3000);
+        } finally {
+            setIsRefreshing(false);
+        }
+    }, [forceRefresh]);
 
     const instrument = data?.instruments?.find((i) => i.symbol === symbol);
     const meta = PAIR_DISPLAY[symbol] ?? { name: symbol, desc: "" };
@@ -259,12 +274,17 @@ export function InstrumentPageClient({ symbol }: { symbol: string }) {
                         <span className="text-[11px] font-bold text-zinc-300">{symbol}</span>
                         <div className="ml-auto flex items-center gap-2">
                             <button
-                                onClick={() => refetch()}
-                                disabled={isFetching}
-                                className="flex items-center gap-1.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-[10px] font-semibold text-zinc-500 transition-all hover:text-zinc-300 disabled:opacity-40"
+                                onClick={handleForceRefresh}
+                                disabled={isRefreshing || isLoading}
+                                className={cn(
+                                    "flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[10px] font-semibold transition-all disabled:opacity-40",
+                                    refreshError
+                                        ? "border-rose-500/20 bg-rose-500/[0.06] text-rose-400"
+                                        : "border-white/[0.07] bg-white/[0.03] text-zinc-500 hover:text-zinc-300"
+                                )}
                             >
-                                <RefreshCw className={cn("h-3 w-3", isFetching && "animate-spin")} />
-                                Refresh AI
+                                <RefreshCw className={cn("h-3 w-3", isRefreshing && "animate-spin")} />
+                                {isRefreshing ? "Refreshing…" : refreshError ? "Failed — retry" : "Refresh AI"}
                             </button>
                         </div>
                     </div>

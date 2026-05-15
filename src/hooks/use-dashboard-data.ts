@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
 type NewsResponse = {
@@ -228,7 +228,9 @@ export function useMacroData() {
 }
 
 export function useInstruments() {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ["instruments"],
     queryFn: async (): Promise<InstrumentsResponse> => {
       const res = await fetch("/api/instruments");
@@ -238,6 +240,16 @@ export function useInstruments() {
     staleTime: 15 * 60 * 1000,
     refetchInterval: 15 * 60 * 1000,
   });
+
+  // Bypasses the 15-min server cache — always gets fresh AI + Reddit data
+  const forceRefresh = async (): Promise<void> => {
+    const res = await fetch("/api/instruments?bust=1");
+    if (!res.ok) throw new Error("Failed to refresh instruments");
+    const fresh = (await res.json()) as InstrumentsResponse;
+    queryClient.setQueryData(["instruments"], fresh);
+  };
+
+  return { ...query, forceRefresh };
 }
 
 export type RedditPost = {
