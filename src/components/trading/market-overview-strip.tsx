@@ -12,10 +12,30 @@ function volatilityLabel(value: number): string {
   return "Low Vol";
 }
 
+function StripSkeleton() {
+  return (
+    <Card className="overflow-hidden border-white/[0.08] bg-gradient-to-b from-indigo-500/[0.07] via-purple-500/[0.04] to-transparent px-2 py-2">
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2 space-y-2">
+            <div className="flex items-center gap-1.5">
+              <div className="sk h-3 w-3 rounded" />
+              <div className="sk h-2 w-12 rounded" />
+            </div>
+            <div className="sk h-3 w-20 rounded" />
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 export function MarketOverviewStrip() {
-  const { data: instruments } = useInstruments();
-  const { data: macro } = useMacroDesk();
-  const { data: news } = useNews();
+  const { data: instruments, isLoading: instrLoading } = useInstruments();
+  const { data: macro, isLoading: macroLoading } = useMacroDesk();
+  const { data: news, isLoading: newsLoading } = useNews();
+
+  if (instrLoading && macroLoading && newsLoading) return <StripSkeleton />;
 
   const topInstrument = React.useMemo(() => {
     const rows = instruments?.instruments ?? [];
@@ -60,7 +80,7 @@ export function MarketOverviewStrip() {
     },
     {
       label: "Volatility",
-      value: avgVol ?? "Loading",
+      value: avgVol ?? "—",
       icon: Activity,
       tone: "text-emerald-300",
     },

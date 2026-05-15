@@ -126,9 +126,128 @@ export function MacroPanel({
 
   if (loading) {
     return (
-      <Card className="relative overflow-hidden border-white/[0.08] bg-zinc-950 shadow-2xl">
-        <CardHeader className="pb-3"><div className="h-6 w-32 animate-pulse rounded bg-white/[0.06]" /></CardHeader>
-        <CardContent className="h-[400px] animate-pulse rounded-xl bg-white/[0.02]" />
+      <Card className="relative overflow-hidden border-white/[0.08] bg-gradient-to-br from-[#0c0c0e] to-[#121214] shadow-2xl">
+        {/* Header */}
+        <div className="border-b border-white/[0.04] px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="sk h-8 w-8 rounded-lg" />
+              <div className="space-y-1.5">
+                <div className="sk h-2 w-20 rounded" />
+                <div className="sk h-4 w-32 rounded" />
+              </div>
+            </div>
+            <div className="sk h-6 w-20 rounded-md" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12">
+          {/* Left: Desk Summary + Macro Snapshot */}
+          <div className="lg:col-span-4 p-4 sm:p-6 space-y-6 border-b border-white/[0.04] lg:border-b-0 lg:border-r">
+            {/* Desk Summary card */}
+            <div className="rounded-xl border border-white/[0.04] bg-[#0c0c0e] overflow-hidden">
+              <div className="px-4 py-3 border-b border-white/[0.04] flex items-center gap-2">
+                <div className="sk h-3.5 w-3.5 rounded" />
+                <div className="sk h-2.5 w-24 rounded" />
+              </div>
+              <div className="p-4 sm:p-5 space-y-2">
+                <div className="sk h-3 w-full rounded" />
+                <div className="sk h-3 w-5/6 rounded" />
+                <div className="sk h-3 w-4/5 rounded" />
+                <div className="mt-4 pt-4 border-t border-white/[0.04] space-y-2.5">
+                  <div className="sk h-2 w-16 rounded" />
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-start gap-2.5">
+                      <div className="sk mt-1.5 h-1 w-2.5 rounded-full" />
+                      <div className="sk h-3 flex-1 rounded" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Macro Snapshot card */}
+            <div className="rounded-xl border border-white/[0.04] bg-[#0c0c0e] p-4 sm:p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <div className="sk h-3.5 w-3.5 rounded" />
+                <div className="sk h-2.5 w-28 rounded" />
+              </div>
+              <div className="space-y-2.5">
+                {/* Column headers */}
+                <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
+                  <div className="sk h-2 w-6 rounded" />
+                  <div className="flex gap-8">
+                    <div className="sk h-2 w-8 rounded" />
+                    <div className="sk h-2 w-8 rounded" />
+                    <div className="sk h-2 w-8 rounded" />
+                  </div>
+                </div>
+                {["USD", "EUR", "GBP", "JPY"].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between py-1">
+                    <div className="space-y-1">
+                      <div className="sk h-2.5 w-8 rounded" />
+                      <div className="sk h-1.5 w-6 rounded" />
+                    </div>
+                    <div className="flex gap-6">
+                      <div className="sk h-2.5 w-10 rounded" />
+                      <div className="sk h-2.5 w-10 rounded" />
+                      <div className="sk h-2.5 w-10 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Middle: Calendar placeholder */}
+          <div className="lg:col-span-4 p-4 sm:p-6 space-y-3 border-b border-white/[0.04] lg:border-b-0 lg:border-r">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="sk h-5 w-5 rounded-md" />
+              <div className="sk h-4 w-28 rounded" />
+            </div>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="rounded-lg border border-white/[0.04] bg-white/[0.01] p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="sk h-2.5 w-16 rounded" />
+                  <div className="sk h-4 w-12 rounded-full" />
+                </div>
+                <div className="sk h-3 w-3/4 rounded" />
+                <div className="flex gap-4">
+                  <div className="sk h-2 w-14 rounded" />
+                  <div className="sk h-2 w-14 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Right: News Feed placeholder */}
+          <div className="lg:col-span-4 p-4 sm:p-6 bg-[#0c0c0e] space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="sk h-6 w-6 rounded-md" />
+                <div className="sk h-4 w-20 rounded" />
+              </div>
+              <div className="sk h-5 w-12 rounded-full" />
+            </div>
+            {/* Filter pills */}
+            <div className="flex gap-1.5 flex-wrap">
+              {[40, 28, 32, 28, 24, 48].map((w, i) => (
+                <div key={i} className={`sk h-5 rounded-md`} style={{ width: `${w * 4}px` }} />
+              ))}
+            </div>
+            {/* News rows */}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="p-2.5 space-y-1.5">
+                <div className="sk h-3 w-full rounded" />
+                {i % 3 !== 2 && <div className="sk h-3 w-4/5 rounded" />}
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="sk h-2 w-10 rounded" />
+                  <div className="sk h-2 w-12 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </Card>
     );
   }

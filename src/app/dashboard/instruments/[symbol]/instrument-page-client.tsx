@@ -291,14 +291,88 @@ export function InstrumentPageClient({ symbol }: { symbol: string }) {
                 </header>
 
                 <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8">
-                    {/* Loading */}
+                    {/* Loading — skeleton layout matching the real page */}
                     {isLoading && (
-                        <div className="flex flex-col items-center gap-4 py-32 text-center">
-                            <div className="relative h-12 w-12">
-                                <div className="absolute inset-0 animate-spin rounded-full border-2 border-white/[0.05] border-t-indigo-500/60" />
+                        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px]">
+                            {/* Left column */}
+                            <div className="flex flex-col gap-5">
+                                {/* Instrument header skeleton */}
+                                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.015] p-5 sm:p-6 space-y-5">
+                                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="sk h-14 w-14 rounded-2xl" />
+                                            <div className="space-y-2">
+                                                <div className="sk h-2.5 w-28 rounded" />
+                                                <div className="sk h-8 w-32 rounded" />
+                                                <div className="sk h-2.5 w-44 rounded" />
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 sm:flex-col sm:items-end">
+                                            <div className="sk h-9 w-28 rounded-xl" />
+                                            <div className="sk h-9 w-28 rounded-xl" />
+                                        </div>
+                                    </div>
+                                    {/* Confidence bar */}
+                                    <div className="flex gap-[3px]">
+                                        {Array.from({ length: 20 }).map((_, i) => (
+                                            <div key={i} className="sk h-2 flex-1 rounded-sm" style={{ opacity: i < 15 ? 1 : 0.3 }} />
+                                        ))}
+                                    </div>
+                                    {/* Summary */}
+                                    <div className="space-y-2 border-t border-white/[0.04] pt-4">
+                                        <div className="sk h-3 w-full rounded" />
+                                        <div className="sk h-3 w-3/4 rounded" />
+                                    </div>
+                                    {/* Buttons */}
+                                    <div className="flex gap-2">
+                                        <div className="sk h-9 w-36 rounded-xl" />
+                                        <div className="sk h-9 w-40 rounded-xl" />
+                                    </div>
+                                </div>
+
+                                {/* Chart skeleton */}
+                                <div className="h-[400px] sm:h-[520px] overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.01] relative">
+                                    <div className="sk absolute inset-0 rounded-2xl" />
+                                    {/* Fake price line */}
+                                    <svg className="absolute inset-0 w-full h-full opacity-10" preserveAspectRatio="none">
+                                        <polyline
+                                            points="0,300 80,260 160,280 240,210 320,230 400,180 480,200 560,160 640,140 720,170 800,130 880,150 960,110 1040,90 1120,70"
+                                            fill="none"
+                                            stroke="rgba(99,102,241,0.5)"
+                                            strokeWidth="2"
+                                        />
+                                    </svg>
+                                    <div className="absolute bottom-8 left-8 right-8 flex items-center gap-2">
+                                        <div className="sk h-2 w-8 rounded" />
+                                        <div className="sk h-2 w-8 rounded" />
+                                        <div className="sk h-2 w-8 rounded" />
+                                        <div className="sk h-2 w-8 rounded" />
+                                        <div className="sk h-2 w-8 rounded" />
+                                    </div>
+                                </div>
                             </div>
-                            <p className="text-sm font-medium text-zinc-500">AI analysing {symbol}…</p>
-                            <p className="text-xs text-zinc-700">Fetching news · technicals · macro · Reddit</p>
+
+                            {/* Right: analysis pillars skeleton */}
+                            <div className="hidden lg:flex flex-col gap-4">
+                                <div className="sk h-2.5 w-36 rounded" />
+                                {["News Driver", "Technical Levels", "Macro Backdrop", "Reddit Sentiment"].map((label, i) => (
+                                    <div
+                                        key={label}
+                                        className="rounded-2xl border border-white/[0.05] bg-white/[0.01] p-4 space-y-3"
+                                        style={{ animationDelay: `${i * 80}ms` }}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <div className="sk h-7 w-7 rounded-lg" />
+                                            <div className="sk h-2.5 w-24 rounded" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="sk h-3 w-full rounded" />
+                                            <div className="sk h-3 w-4/5 rounded" />
+                                            {i < 2 && <div className="sk h-3 w-2/3 rounded" />}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
 
